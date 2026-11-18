@@ -1,0 +1,88 @@
+{
+  "fixture": "getStreamSchema.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/streams/sdk_logs_6moiazbq/schema?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "name": "sdk_logs_6moiazbq",
+      "storage_type": "disk",
+      "stream_type": "logs",
+      "stats": {
+        "created_at": 1795033200241779,
+        "doc_time_min": 0,
+        "doc_time_max": 0,
+        "doc_num": 0,
+        "file_num": 0,
+        "storage_size": 0.0,
+        "compressed_size": 0.0,
+        "index_size": 0.0,
+        "mindex_size": 0.0
+      },
+      "schema": [
+        {
+          "name": "_timestamp",
+          "type": "Int64"
+        },
+        {
+          "name": "level",
+          "type": "Utf8"
+        },
+        {
+          "name": "message",
+          "type": "Utf8"
+        },
+        {
+          "name": "n",
+          "type": "Int64"
+        },
+        {
+          "name": "ok",
+          "type": "Boolean"
+        },
+        {
+          "name": "run_id",
+          "type": "Utf8"
+        },
+        {
+          "name": "src",
+          "type": "Utf8"
+        },
+        {
+          "name": "user_id",
+          "type": "Int64"
+        }
+      ],
+      "settings": {
+        "partition_keys": {},
+        "full_text_search_keys": [],
+        "index_fields": [],
+        "bloom_filter_fields": [],
+        "distinct_value_fields": [],
+        "data_retention": 0,
+        "max_query_range": 0,
+        "store_original_data": false,
+        "approx_partition": false,
+        "index_updated_at": 0,
+        "extended_retention_days": [],
+        "index_original_data": false,
+        "index_all_values": false,
+        "enable_distinct_fields": true,
+        "enable_log_patterns_extraction": false,
+        "is_llm_stream": false,
+        "storage_type": "normal"
+      },
+      "total_fields": 8
+    }
+  }
+}

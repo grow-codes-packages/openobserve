@@ -1,0 +1,63 @@
+{
+  "fixture": "otlpLogs.json",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/v1/logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json",
+      "stream-name": "sdk_otlp_6moiazbq"
+    },
+    "body": {
+      "resourceLogs": [
+        {
+          "resource": {
+            "attributes": [
+              {
+                "key": "service.name",
+                "value": {
+                  "stringValue": "sdk-json-6moiazbq"
+                }
+              }
+            ]
+          },
+          "scopeLogs": [
+            {
+              "scope": {
+                "name": "sdk-verify"
+              },
+              "logRecords": [
+                {
+                  "timeUnixNano": "1795033200455798848",
+                  "severityNumber": 9,
+                  "severityText": "INFO",
+                  "body": {
+                    "stringValue": "otlp json"
+                  },
+                  "attributes": [
+                    {
+                      "key": "run_id",
+                      "value": {
+                        "stringValue": "6moiazbq"
+                      }
+                    }
+                  ],
+                  "traceId": "038a1ed5af73678e47809f854dabaae9",
+                  "spanId": "b7ad6b7169203331"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {}
+  }
+}

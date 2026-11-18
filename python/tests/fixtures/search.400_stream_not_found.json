@@ -1,0 +1,33 @@
+{
+  "fixture": "search.400_stream_not_found",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM no_such_stream_xyz",
+        "start_time": 1795029600538560,
+        "end_time": 1795033260538560,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 20002,
+      "message": "Search stream not found: no_such_stream_xyz",
+      "error_detail": "",
+      "trace_id": "01a1f050f79b75028dc692d5e926b1aa"
+    }
+  }
+}
