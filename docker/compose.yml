@@ -30,7 +30,7 @@ x-test: &test
   volumes:
     - bootstrap:/bootstrap:ro
   environment:
-    GROW_OPENOBSERVE_URL: ${GROW_OPENOBSERVE_URL:-http://service:5080}
+    GROW_OPENOBSERVE_URL: ${GROW_OPENOBSERVE_URL:-http://openobserve:5080}
     GROW_BOOTSTRAP_ENV: /bootstrap/env
     GROW_TEST_RUN_ID: ${GROW_TEST_RUN_ID:-local}
   init: true
