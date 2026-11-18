@@ -1,0 +1,55 @@
+{
+  "fixture": "ingestJson.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/sdk_logs_6moiazbq/_json",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": [
+      {
+        "message": "hello alpha needle6moiazbq",
+        "level": "info",
+        "run_id": "6moiazbq",
+        "n": 1,
+        "_timestamp": 1795033200241779
+      },
+      {
+        "message": "hello beta",
+        "level": "error",
+        "run_id": "6moiazbq",
+        "n": 2,
+        "_timestamp": 1795033200242779,
+        "user": {
+          "id": 7
+        }
+      },
+      {
+        "message": "hello gamma \u00fcn\u00efc\u00f8d\u00e9",
+        "level": "warn",
+        "run_id": "6moiazbq",
+        "n": 3,
+        "_timestamp": 1795033200243779,
+        "ok": false
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 200,
+      "status": [
+        {
+          "name": "sdk_logs_6moiazbq",
+          "successful": 3,
+          "failed": 0
+        }
+      ]
+    }
+  }
+}

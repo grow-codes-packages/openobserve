@@ -1,0 +1,32 @@
+{
+  "fixture": "traceTimeRange.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/traces/time_range?trace_id=038a1ed5af73678e47809f854dabaae9",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "results": [
+        {
+          "trace_id": "038a1ed5af73678e47809f854dabaae9",
+          "stream": "sdk_traces_6moiazbq",
+          "status": "found",
+          "range": {
+            "start_time": 1795033200603151,
+            "end_time": 1795033200653152
+          }
+        }
+      ],
+      "partial_coverage": false
+    }
+  }
+}

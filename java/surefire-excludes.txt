@@ -1,0 +1,5 @@
+# Generated sdk-kit tests that assume the skeleton client (Bearer token, /health, /v1/ping, /version).
+# OpenObserve uses Basic auth on /healthz and /api/{org}/config; the same scenario runs against an
+# OpenObserve mock in OpenObserveCoreConformanceTest. Remove once sdk-kit builds a fake core target.
+**/testing/ConformanceRunnerTest.java#coreScenarioAgainstMockServer
+**/testing/ConformanceRunnerTest.java#junitAdapterRunsCoreAndSkips
