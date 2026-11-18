@@ -1,0 +1,60 @@
+{
+  "fixture": "listServices.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=traces",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT DISTINCT service_name FROM sdk_traces_6moiazbq ORDER BY service_name",
+        "start_time": 1795029600971696,
+        "end_time": 1795033260971696,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 2,
+      "took_detail": {
+        "total": 2,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 2
+      },
+      "hits": [
+        {
+          "service_name": "sdk-a-6moiazbq"
+        },
+        {
+          "service_name": "sdk-b-6moiazbq"
+        }
+      ],
+      "total": 2,
+      "from": 0,
+      "size": 100,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 4,
+      "trace_id": "01a1f050f94c766099e644b539d71068",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "order_by": "asc",
+      "order_by_metadata": [["service_name", "asc"]],
+      "is_histogram_eligible": false,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

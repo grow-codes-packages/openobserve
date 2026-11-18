@@ -1,16 +1,20 @@
 import { inspect } from "node:util";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  AuthenticationError,
   ConfigError,
-  PACKAGE_KEY,
-  REDACTED,
-  RetryPolicy,
-  Secret,
-  VENDOR_ENV,
+  NotFoundError,
   OpenObserveClient,
   OpenObserveConfig,
   OpenObserveError,
+  REDACTED,
+  RetryPolicy,
+  Secret,
+  UnsupportedError,
+  VENDOR_ENV,
+  normalizeStreamName,
 } from "../src/index.js";
+import { fx } from "./helpers/fixtures.js";
 import { type MockServer, closedPort, startServer } from "./helpers/server.js";
 
 const servers: MockServer[] = [];
@@ -18,227 +22,221 @@ afterEach(async () => {
   await Promise.all(servers.splice(0).map((s) => s.close()));
 });
 
-async function demoServer(token = "t0ken-value"): Promise<MockServer> {
-  const s = await startServer((req) => {
-    if (req.url === "/health") return { status: 200, body: { status: "ok", version: "1.2.3" } };
-    if (req.url === "/version") return { status: 200, body: { version: "1.2.3" } };
-    if (req.url === "/v1/ping") {
-      return req.headers.authorization === `Bearer ${token}`
-        ? { status: 200, body: { pong: true } }
-        : { status: 401, body: { message: "bad token" } };
-    }
-    return { status: 404 };
-  });
+async function server(...args: Parameters<typeof startServer>): Promise<MockServer> {
+  const s = await startServer(...args);
   servers.push(s);
   return s;
 }
 
 const fast = { retry: { maxRetries: 1, initialBackoffMs: 1 } };
+const creds = { user: "admin@stack.local", password: "Gw1-secret-pass" };
+const basic = (u: string, p: string): string =>
+  `Basic ${Buffer.from(`${u}:${p}`).toString("base64")}`;
 
 describe("OpenObserveConfig", () => {
   it("uses defaults and freezes", () => {
     const c = new OpenObserveConfig();
-    expect(c.url).toBe(OpenObserveConfig.DEFAULT_URL);
-    expect(c.requestTimeoutMs).toBe(30_000);
+    expect(c.url).toBe("http://127.0.0.1:5080");
+    expect(c.org).toBe("default");
+    expect(c.stream).toBe("default");
+    expect(c.tracesStream).toBe("default");
     expect(c.retry).toBeInstanceOf(RetryPolicy);
-    expect(c.token).toBeUndefined();
+    expect(c.hasCredentials).toBe(false);
+    expect(c.authorization()).toBeUndefined();
+    expect(c.knownSecrets()).toEqual([]);
     expect(Object.isFrozen(c)).toBe(true);
     expect(OpenObserveConfig.from(c)).toBe(c);
-    expect(OpenObserveConfig.from().url).toBe(c.url);
-    const prefix = `GROW_${PACKAGE_KEY.toUpperCase().replaceAll("-", "_")}_`;
-    expect(OpenObserveConfig.ENV_PREFIX).toBe(prefix);
+    expect(OpenObserveConfig.ENV_PREFIX).toBe("GROW_OPENOBSERVE_");
+    expect(VENDOR_ENV.url).toEqual(["OPENOBSERVE_URL"]);
   });
 
-  it("keeps optional settings", () => {
-    const hooks = {};
-    const logger = { debug() {}, info() {}, warn() {}, error() {} };
-    const c = new OpenObserveConfig({
-      proxy: "http://p:1",
-      userAgentSuffix: "s",
-      hooks,
-      logger,
-      token: new Secret("abcd"),
-    });
-    expect(c.proxy).toBe("http://p:1");
-    expect(c.userAgentSuffix).toBe("s");
-    expect(c.hooks).toBe(hooks);
-    expect(c.logger).toBe(logger);
-    expect(c.knownSecrets()).toEqual(["abcd"]);
+  it("builds Basic auth from user + password and user + token", () => {
+    const p = new OpenObserveConfig(creds);
+    expect(p.authorization()).toBe(basic(creds.user, creds.password));
+    expect(p.knownSecrets()).toContain(creds.password);
+    const t = new OpenObserveConfig({ user: "sa@x.io", token: new Secret("tok-123456") });
+    expect(t.authorization()).toBe(basic("sa@x.io", "tok-123456"));
+    expect(t.hasCredentials).toBe(true);
   });
 
-  it("validate() raises ConfigError", () => {
-    expect(() => new OpenObserveConfig({ url: "ftp://x" })).toThrow(ConfigError);
-    expect(() => new OpenObserveConfig({ token: "   " })).toThrow(ConfigError);
+  it("sends a pre-encoded Basic token verbatim without a user", () => {
+    const c = new OpenObserveConfig({ token: "basic   YWJjOmRlZg==" });
+    expect(c.authorization()).toBe("Basic YWJjOmRlZg==");
+    expect(c.knownSecrets()).toContain("YWJjOmRlZg==");
   });
 
-  it("core.redaction.config: toString/JSON/inspect hide credentials", () => {
-    const c = new OpenObserveConfig({
-      token: "super-secret-tok",
-      headers: { "x-api-key": "hdr-secret" },
-    });
-    for (const form of [String(c), JSON.stringify(c), inspect(c), `${c.token}`]) {
-      expect(form).not.toContain("super-secret-tok");
-      expect(form).not.toContain("hdr-secret");
+  it("normalizes stream names like the server", () => {
+    expect(normalizeStreamName(" Sdk-Mixed.x ")).toBe("sdk_mixed_x");
+    const c = new OpenObserveConfig({ stream: "App.Logs", tracesStream: "My-Traces" });
+    expect(c.stream).toBe("app_logs");
+    expect(c.tracesStream).toBe("my_traces");
+  });
+
+  it.each([
+    [{ org: "" }, /org/],
+    [{ org: "a/b" }, /org/],
+    [{ stream: "  " }, /stream/],
+    [{ tracesStream: " " }, /tracesStream/],
+    [{ user: "u", password: "p", token: "t" }, /either password or token/],
+    [{ user: "u", password: "" }, /requires password or token/],
+    [{ user: "u", token: "  " }, /blank/],
+    [{ password: "p" }, /user is required/],
+    [{ token: "raw" }, /user is required/],
+    [{ user: "u" }, /requires password or token/],
+    [{ url: "ftp://x" }, /url/i],
+  ])("rejects %o", (options, message) => {
+    expect(() => new OpenObserveConfig(options)).toThrow(ConfigError);
+    expect(() => new OpenObserveConfig(options)).toThrow(message);
+  });
+
+  it("redacts credentials in every debug form", () => {
+    const c = new OpenObserveConfig({ ...creds, headers: { "x-extra": "v" } });
+    for (const text of [c.toString(), JSON.stringify(c), inspect(c)]) {
+      expect(text).not.toContain(creds.password);
+      expect(text).toContain(REDACTED);
+      expect(text).toContain(creds.user);
     }
-    expect(String(c)).toContain(REDACTED);
-    expect(String(c)).toMatch(/Config\(/);
+    expect(new OpenObserveConfig({ token: "Basic abcd" }).toJSON().password).toBeNull();
     expect(new OpenObserveConfig().toJSON().token).toBeNull();
   });
 
-  it("core.config.env-precedence: explicit > GROW_* > vendor > default", () => {
-    const prefix = OpenObserveConfig.ENV_PREFIX;
-    const vendor = VENDOR_ENV as { url: string[]; token: string[] };
-    const saved = { url: vendor.url, token: vendor.token };
-    vendor.url = ["VENDOR_ADDR"];
-    vendor.token = ["VENDOR_TOKEN"];
-    try {
-      const env = {
-        [`${prefix}URL`]: "http://grow:1",
-        VENDOR_ADDR: "http://vendor:2",
-        VENDOR_TOKEN: "vendor-token",
-        [`${prefix}REQUEST_TIMEOUT`]: "5s",
-        [`${prefix}MAX_RETRIES`]: "7",
-      };
-      const fromEnv = OpenObserveConfig.fromEnv({}, env);
-      expect(fromEnv.url).toBe("http://grow:1");
-      expect(fromEnv.token?.reveal()).toBe("vendor-token");
-      expect(fromEnv.requestTimeoutMs).toBe(5000);
-      expect(fromEnv.retry.maxRetries).toBe(7);
-      expect(fromEnv.connectTimeoutMs).toBe(10_000);
+  it("fromEnv: GROW_ beats vendor beats default; overrides win", () => {
+    const env = {
+      GROW_OPENOBSERVE_URL: "http://grow:5080",
+      OPENOBSERVE_URL: "http://vendor:5080",
+      OPENOBSERVE_ORG: "acme",
+      OPENOBSERVE_USER: "root@x.io",
+      OPENOBSERVE_PASSWORD: "pw-12345",
+      OPENOBSERVE_STREAM: "app",
+      GROW_OPENOBSERVE_TRACES_STREAM: "tr",
+      GROW_OPENOBSERVE_REQUEST_TIMEOUT: "5s",
+    };
+    const c = OpenObserveConfig.fromEnv({}, env);
+    expect(c.url).toBe("http://grow:5080");
+    expect(c.org).toBe("acme");
+    expect(c.user).toBe("root@x.io");
+    expect(c.password?.reveal()).toBe("pw-12345");
+    expect(c.stream).toBe("app");
+    expect(c.tracesStream).toBe("tr");
+    expect(c.requestTimeoutMs).toBe(5000);
+    expect(OpenObserveConfig.fromEnv({ org: "other" }, env).org).toBe("other");
+    expect(OpenObserveConfig.fromEnv({}, {}).url).toBe(OpenObserveConfig.DEFAULT_URL);
+  });
 
-      const vendorOnly = OpenObserveConfig.fromEnv({}, { VENDOR_ADDR: "http://vendor:2" });
-      expect(vendorOnly.url).toBe("http://vendor:2");
+  it("fromEnv: an explicit token drops the env password and vice versa", () => {
+    const env = {
+      OPENOBSERVE_USER: "u@x.io",
+      OPENOBSERVE_PASSWORD: "pw-1",
+      OPENOBSERVE_TOKEN: "t-1",
+    };
+    expect(() => OpenObserveConfig.fromEnv({}, env)).toThrow(/either password or token/);
+    const t = OpenObserveConfig.fromEnv({ token: "t-2" }, env);
+    expect(t.password).toBeUndefined();
+    expect(t.token?.reveal()).toBe("t-2");
+    const p = OpenObserveConfig.fromEnv({ password: "pw-2" }, env);
+    expect(p.token).toBeUndefined();
+    expect(p.password?.reveal()).toBe("pw-2");
+  });
 
-      const explicit = OpenObserveConfig.fromEnv(
-        { url: "http://explicit:3", token: "explicit-token", retry: { initialBackoffMs: 1 } },
-        env,
-      );
-      expect(explicit.url).toBe("http://explicit:3");
-      expect(explicit.token?.reveal()).toBe("explicit-token");
-      expect(explicit.retry.maxRetries).toBe(7);
-      expect(explicit.retry.initialBackoffMs).toBe(1);
-
-      expect(OpenObserveConfig.fromEnv({}, {}).url).toBe(OpenObserveConfig.DEFAULT_URL);
-      expect(OpenObserveConfig.fromEnv().url).toBeTypeOf("string");
-
-      let err: unknown;
-      try {
-        OpenObserveConfig.fromEnv({}, { [`${prefix}TOTAL_TIMEOUT`]: "forever-and-secret" });
-      } catch (e) {
-        err = e;
-      }
-      expect(err).toBeInstanceOf(ConfigError);
-      expect((err as Error).message).toContain(`${prefix}TOTAL_TIMEOUT`);
-      expect((err as Error).message).not.toContain("forever-and-secret");
-    } finally {
-      vendor.url = saved.url;
-      vendor.token = saved.token;
-    }
+  it("fromEnv: invalid values name the variable, never the value", () => {
+    expect(() =>
+      OpenObserveConfig.fromEnv({}, { GROW_OPENOBSERVE_MAX_RETRIES: "lots-secret" }),
+    ).toThrow(/GROW_OPENOBSERVE_MAX_RETRIES/);
   });
 });
 
-describe("OpenObserveClient", () => {
-  it("health, ping and serverVersion against the demo API", async () => {
-    const s = await demoServer();
-    const client = new OpenObserveClient({ url: s.url, token: "t0ken-value", ...fast });
-    expect(await client.health()).toEqual({
-      healthy: true,
-      status: "ok",
-      details: { version: "1.2.3" },
-    });
+describe("OpenObserveClient core", () => {
+  it("health maps /healthz", async () => {
+    const s = await server([fx("health.ok")]);
+    const client = new OpenObserveClient({ url: s.url });
+    expect(await client.health()).toEqual({ healthy: true, status: "ok", details: {} });
+    expect(s.requests[0]?.url).toBe("/healthz");
+    expect(s.requests[0]?.headers.authorization).toBeUndefined();
+    await client.close();
+  });
+
+  it("health tolerates bodies without status and reports unreachable", async () => {
+    const s = await server([{ status: 200, body: "" }]);
+    const client = new OpenObserveClient({ url: s.url });
+    expect((await client.health()).status).toBe("ok");
+    const down = new OpenObserveClient({ url: `http://127.0.0.1:${await closedPort()}`, ...fast });
+    const h = await down.health();
+    expect(h.healthy).toBe(false);
+    expect(h.status).toBe("unreachable");
+    await Promise.all([client.close(), down.close()]);
+  });
+
+  it("ping and serverVersion use the authenticated /api/{org}/config", async () => {
+    const s = await server([fx("ping.ok")]);
+    const client = new OpenObserveClient({ url: s.url, org: "acme", ...creds });
     expect(await client.ping()).toBeGreaterThanOrEqual(0);
-    expect(await client.serverVersion()).toBe("1.2.3");
-    expect(client.transport.userAgent).toContain(`grow-codes-${PACKAGE_KEY}/`);
+    expect(await client.serverVersion()).toBe("v1.1.2");
+    expect(s.requests[0]?.url).toBe("/api/acme/config");
+    expect(s.requests[0]?.headers.authorization).toBe(basic(creds.user, creds.password));
+    expect(s.requests[0]?.headers["user-agent"]).toMatch(
+      /^grow-codes-openobserve\/\S+ \(typescript\)$/,
+    );
     await client.close();
   });
 
-  it("ping with a bad token raises AuthenticationError without leaking it", async () => {
-    const s = await demoServer();
-    const client = new OpenObserveClient(
-      new OpenObserveConfig({ url: s.url, token: "wrong-token-xyz", ...fast }),
-    );
+  it("ping maps the plain-text 401 and never leaks credentials", async () => {
+    const s = await server([fx("ping.401")]);
+    const client = new OpenObserveClient({ url: s.url, ...creds });
     const err = await client.ping().catch((e: unknown) => e);
-    expect(err).toBeInstanceOf(OpenObserveError);
-    expect((err as OpenObserveError).code).toBe("AUTHENTICATION");
-    expect((err as Error).message).not.toContain("wrong-token-xyz");
+    expect(err).toBeInstanceOf(AuthenticationError);
+    expect((err as OpenObserveError).httpStatus).toBe(401);
+    expect((err as OpenObserveError).message).toContain("Unauthorized Access");
+    expect(JSON.stringify(err)).not.toContain(creds.password);
     await client.close();
   });
 
-  it("serverVersion raises UnsupportedError when absent", async () => {
-    const s = await startServer([{ status: 404 }]);
-    servers.push(s);
-    const client = new OpenObserveClient({ url: s.url, ...fast });
-    await expect(client.serverVersion()).rejects.toMatchObject({ code: "UNSUPPORTED" });
-    const s2 = await startServer([{ status: 200, body: { other: 1 } }]);
-    servers.push(s2);
-    const client2 = new OpenObserveClient({ url: s2.url, ...fast });
-    await expect(client2.serverVersion()).rejects.toMatchObject({ code: "UNSUPPORTED" });
-    await client.close();
-    await client2.close();
-  });
-
-  it("health reports vendor words and unhealthy statuses", async () => {
-    const s = await startServer((req) =>
-      req.url === "/health"
-        ? { status: 200, body: { status: "degraded" } }
-        : { status: 200, body: "" },
-    );
-    servers.push(s);
-    const degraded = new OpenObserveClient({ url: s.url, ...fast });
-    expect(await degraded.health()).toMatchObject({ healthy: false, status: "degraded" });
-    await degraded.close();
-    const empty = await startServer([{ status: 200 }]);
-    servers.push(empty);
-    const ok = new OpenObserveClient({ url: empty.url, ...fast });
-    expect(await ok.health()).toMatchObject({ healthy: true, status: "ok" });
-    await ok.close();
-    const down = await startServer([{ status: 500 }]);
-    servers.push(down);
-    const sick = new OpenObserveClient({ url: down.url, ...fast });
-    expect(await sick.health()).toMatchObject({ healthy: false, status: "unhealthy" });
-    await sick.close();
-  });
-
-  it("core.health.unreachable: closed port -> healthy=false, status=unreachable", async () => {
-    const port = await closedPort();
-    const client = new OpenObserveClient({ url: `http://127.0.0.1:${port}`, ...fast });
-    expect(await client.health()).toEqual({
-      healthy: false,
-      status: "unreachable",
-      details: { error: "UNAVAILABLE" },
-    });
+  it("serverVersion throws UnsupportedError without a version", async () => {
+    const s = await server([{ status: 200, body: { build_type: "opensource" } }]);
+    const client = new OpenObserveClient({ url: s.url, ...creds });
+    await expect(client.serverVersion()).rejects.toBeInstanceOf(UnsupportedError);
     await client.close();
   });
 
-  it("health rethrows cancellation", async () => {
-    const s = await demoServer();
-    const client = new OpenObserveClient({ url: s.url });
-    await expect(client.health({ signal: AbortSignal.abort() })).rejects.toMatchObject({
-      code: "CANCELLED",
-    });
+  it("rejects invalid JSON bodies with ValidationError", async () => {
+    const s = await server([{ status: 200, body: "{not json" }]);
+    const client = new OpenObserveClient({ url: s.url, ...creds });
+    await expect(client.serverVersion()).rejects.toThrow(/invalid JSON/);
     await client.close();
   });
 
-  it("core.close.idempotent: close twice is safe", async () => {
-    const s = await demoServer();
-    const client = new OpenObserveClient({ url: s.url });
-    await client.health();
+  it("maps 404 plain text to NotFoundError", async () => {
+    const s = await server([fx("search.404_unknown_org")]);
+    const client = new OpenObserveClient({ url: s.url, ...creds });
+    await expect(client.logs.search('SELECT * FROM "x"')).rejects.toBeInstanceOf(NotFoundError);
     await client.close();
-    await client.close();
-    await expect(client.ping()).rejects.toMatchObject({ code: "CONFIG" });
   });
 
-  it("fromEnv builds from GROW_* variables", async () => {
-    const s = await demoServer();
-    const key = `${OpenObserveConfig.ENV_PREFIX}URL`;
-    process.env[key] = s.url;
+  it("fromEnv builds a client; close is idempotent and closes log clients", async () => {
+    const s = await server([fx("ingestJson.ok")]);
+    const prev = process.env.GROW_OPENOBSERVE_URL;
+    process.env.GROW_OPENOBSERVE_URL = s.url;
     try {
-      const client = OpenObserveClient.fromEnv({ token: "t0ken-value" });
+      const client = OpenObserveClient.fromEnv({ ...creds, stream: "sdk_logs_6moiazbq" });
       expect(client.config.url).toBe(s.url);
-      expect(await client.ping()).toBeGreaterThanOrEqual(0);
+      expect(client.transport).toBeDefined();
+      const logs = client.logClient({ batch: { flushIntervalMs: 60_000 } });
+      logs.send({ message: "bye" });
       await client.close();
+      await client.close();
+      expect(logs.stats().sent).toBe(1);
+      expect(s.requests[0]?.url).toBe("/api/default/sdk_logs_6moiazbq/_json");
+      await expect(client.ping()).rejects.toThrow(/closed/);
     } finally {
-      delete process.env[key];
+      if (prev === undefined) delete process.env.GROW_OPENOBSERVE_URL;
+      else process.env.GROW_OPENOBSERVE_URL = prev;
     }
+  });
+
+  it("logQuery and traceQuery default to the config streams", () => {
+    const client = new OpenObserveClient({ stream: "A", tracesStream: "B" });
+    expect(client.logQuery().stream).toBe("a");
+    expect(client.logQuery("Other").stream).toBe("other");
+    expect(client.traces.stream).toBe("b");
+    expect(client.traceQuery("T.2").stream).toBe("t_2");
   });
 });

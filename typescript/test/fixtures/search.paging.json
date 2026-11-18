@@ -1,0 +1,69 @@
+{
+  "fixture": "search.paging",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq WHERE run_id = '6moiazbq' ORDER BY _timestamp DESC",
+        "start_time": 1795029600498289,
+        "end_time": 1795033260498289,
+        "from": 1,
+        "size": 2
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 3,
+      "took_detail": {
+        "total": 3,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 3
+      },
+      "hits": [
+        {
+          "_timestamp": 1795033200440560,
+          "level": "debug",
+          "message": "multi 0",
+          "run_id": "6moiazbq",
+          "src": "multi"
+        },
+        {
+          "_timestamp": 1795033200243779,
+          "level": "warn",
+          "message": "hello gamma \u00fcn\u00efc\u00f8d\u00e9",
+          "n": 3,
+          "ok": false,
+          "run_id": "6moiazbq"
+        }
+      ],
+      "total": 2,
+      "from": 1,
+      "size": 2,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 5,
+      "trace_id": "01a1f050f77371f0966b336b4fa5c9d5",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "order_by": "desc",
+      "order_by_metadata": [["_timestamp", "desc"]],
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 1.0
+    }
+  }
+}

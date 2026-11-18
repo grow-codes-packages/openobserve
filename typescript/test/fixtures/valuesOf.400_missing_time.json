@@ -1,0 +1,22 @@
+{
+  "fixture": "valuesOf.400_missing_time",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/sdk_logs_6moiazbq/_values?fields=level",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 400,
+      "message": "start_time is empty"
+    }
+  }
+}

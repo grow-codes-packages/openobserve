@@ -1,0 +1,61 @@
+{
+  "fixture": "search.match_all",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq WHERE match_all('needle6moiazbq')",
+        "start_time": 1795029600519779,
+        "end_time": 1795033260519779,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 3,
+      "took_detail": {
+        "total": 3,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 3
+      },
+      "hits": [
+        {
+          "_timestamp": 1795033200241779,
+          "level": "info",
+          "message": "hello alpha needle6moiazbq",
+          "n": 1,
+          "run_id": "6moiazbq"
+        }
+      ],
+      "total": 1,
+      "from": 0,
+      "size": 100,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 5,
+      "trace_id": "01a1f050f78876f1b02ae938e3c430f4",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "order_by": "desc",
+      "order_by_metadata": [["_timestamp", "desc"]],
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

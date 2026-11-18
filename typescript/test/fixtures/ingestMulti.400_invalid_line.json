@@ -1,0 +1,23 @@
+{
+  "fixture": "ingestMulti.400_invalid_line",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/sdk_logs_6moiazbq/_multi",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/x-ndjson"
+    },
+    "body": "{\"message\":\"ok\"}\nnot json"
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 400,
+      "message": "Error# Failed processing: JsonError(Error(\"expected ident\", line: 1, column: 2))"
+    }
+  }
+}

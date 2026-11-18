@@ -1,0 +1,66 @@
+{
+  "fixture": "otlpTraces.json",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/v1/traces",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json",
+      "stream-name": "sdk_traces_6moiazbq"
+    },
+    "body": {
+      "resourceSpans": [
+        {
+          "resource": {
+            "attributes": [
+              {
+                "key": "service.name",
+                "value": {
+                  "stringValue": "sdk-b-6moiazbq"
+                }
+              }
+            ]
+          },
+          "scopeSpans": [
+            {
+              "scope": {
+                "name": "sdk-verify"
+              },
+              "spans": [
+                {
+                  "traceId": "138a1ed5af73678e47809f854dabaae9",
+                  "spanId": "1111111111111111",
+                  "name": "consume",
+                  "kind": 5,
+                  "startTimeUnixNano": "1795033200648151382",
+                  "endTimeUnixNano": "1795033200653151382",
+                  "attributes": [
+                    {
+                      "key": "run_id",
+                      "value": {
+                        "stringValue": "6moiazbq"
+                      }
+                    }
+                  ],
+                  "status": {
+                    "code": 0
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "partialSuccess": null
+    }
+  }
+}
