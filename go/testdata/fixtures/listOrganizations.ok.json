@@ -1,0 +1,52 @@
+{
+  "fixture": "listOrganizations.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/organizations",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "data": [
+        {
+          "id": 2,
+          "identifier": "_meta",
+          "name": "_meta",
+          "user_email": "admin@stack.local",
+          "ingest_threshold": 9383939382,
+          "search_threshold": 9383939382,
+          "type": "custom",
+          "UserObj": {
+            "first_name": "",
+            "last_name": "",
+            "email": "admin@stack.local"
+          },
+          "plan": 0
+        },
+        {
+          "id": 1,
+          "identifier": "default",
+          "name": "default",
+          "user_email": "admin@stack.local",
+          "ingest_threshold": 9383939382,
+          "search_threshold": 9383939382,
+          "type": "default",
+          "UserObj": {
+            "first_name": "",
+            "last_name": "",
+            "email": "admin@stack.local"
+          },
+          "plan": 0
+        }
+      ]
+    }
+  }
+}

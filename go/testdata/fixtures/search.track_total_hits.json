@@ -1,0 +1,56 @@
+{
+  "fixture": "search.track_total_hits",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq WHERE run_id = '6moiazbq'",
+        "start_time": 1795029600514636,
+        "end_time": 1795033260514636,
+        "from": 0,
+        "size": 2,
+        "track_total_hits": true
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 3,
+      "took_detail": {
+        "total": 3,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 2
+      },
+      "hits": [
+        {
+          "zo_sql_num": 5
+        }
+      ],
+      "total": 5,
+      "from": 0,
+      "size": 2,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 5,
+      "trace_id": "01a1f050f7837ad2a8b261d95c829990",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

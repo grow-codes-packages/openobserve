@@ -1,0 +1,22 @@
+{
+  "fixture": "deleteStream.404",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "DELETE",
+    "path": "/api/default/streams/sdk_bulk_6moiazbq?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 404,
+      "message": "stream not found"
+    }
+  }
+}

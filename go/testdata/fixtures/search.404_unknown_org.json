@@ -1,0 +1,26 @@
+{
+  "fixture": "search.404_unknown_org",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/nosuchorg_6moiazbq/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM x",
+        "start_time": 1,
+        "end_time": 2
+      }
+    }
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": "Organization not found"
+  }
+}

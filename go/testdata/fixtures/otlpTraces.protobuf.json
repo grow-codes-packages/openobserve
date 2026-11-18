@@ -1,0 +1,24 @@
+{
+  "fixture": "otlpTraces.protobuf",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/v1/traces",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/x-protobuf",
+      "stream-name": "sdk_traces_6moiazbq"
+    },
+    "body": {
+      "note": "ExportTraceServiceRequest (protobuf)",
+      "protobuf_base64": "Ct0ECmAKIAoMc2VydmljZS5uYW1lEhAKDnNkay1hLTZtb2lhemJxChoKD3NlcnZpY2UudmVyc2lvbhIHCgUxLjIuMwogChZkZXBsb3ltZW50LmVudmlyb25tZW50EgYKBHRlc3QS+AMKEwoKc2RrLXZlcmlmeRIFMC4wLjASiAEKEAOKHtWvc2eOR4CfhU2rqukSCLeta3FpIDMxKg1HRVQgL2NoZWNrb3V0MAI5Frz7eS896RhBlqz2fC896RhKFAoLaHR0cC5tZXRob2QSBQoDR0VUShcKEGh0dHAuc3RhdHVzX2NvZGUSAxjIAUoUCgZydW5faWQSCgoINm1vaWF6YnF6AhgBEvUBChADih7Vr3NnjkeAn4VNq6rpEggA8GeqC6kCtyIIt61rcWkgMzEqCGRiLnF1ZXJ5MAM5llKUei896RhBFhZefC896RhKGQoJZGIuc3lzdGVtEgwKCnBvc3RncmVzcWxKCwoFcmV0cnkSAhABShIKBXJhdGlvEgkhAAAAAAAA4D9KFAoGcnVuX2lkEgoKCDZtb2lhemJxWiIJFuksey896RgSCmNhY2hlLm1pc3MaCwoDa2V5EgQKAnUxai8KEEv5LzV3s02mo86SnQ4ORzYSCADwZ6oLqQK4IhEKBGtpbmQSCQoHZm9sbG93c3oIEgRib29tGAISXgoQA4oe1a9zZ45HgJ+FTauq6RIICgsMDQ4PEBEiCADwZ6oLqQK3Kgpyb3cuZGVjb2RlMAE5Fuksey896RhBVjR5ey896RhKFAoGcnVuX2lkEgoKCDZtb2lhemJxegA="
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/x-protobuf"
+    },
+    "body": ""
+  }
+}

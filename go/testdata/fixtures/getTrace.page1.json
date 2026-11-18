@@ -1,0 +1,84 @@
+{
+  "fixture": "getTrace.page1",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/sdk_traces_6moiazbq/traces/038a1ed5af73678e47809f854dabaae9/details?start_time=1795029600733793&end_time=1795033260733793&size=1",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 0,
+      "took_detail": {
+        "total": 0,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 2
+      },
+      "hits": [
+        {
+          "_o2_ingest_ts": 1795033200656025,
+          "_timestamp": 1795033200603151,
+          "duration": 50000,
+          "end_time": 1795033200653151382,
+          "events": "[]",
+          "flags": 1,
+          "http_method": "GET",
+          "http_status_code": "200",
+          "links": "[]",
+          "operation_name": "GET /checkout",
+          "run_id": "6moiazbq",
+          "service_deployment_environment": "test",
+          "service_name": "sdk-a-6moiazbq",
+          "service_service_version": "1.2.3",
+          "span_id": "b7ad6b7169203331",
+          "span_kind": "2",
+          "span_status": "OK",
+          "start_time": 1795033200603151382,
+          "status_code": 1,
+          "status_message": "",
+          "trace_id": "038a1ed5af73678e47809f854dabaae9"
+        }
+      ],
+      "total": 1,
+      "from": 0,
+      "size": 1,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 4,
+      "trace_id": "01a1f050f85e71838a50655b9002fdce",
+      "is_partial": false,
+      "new_start_time": 1795029600733793,
+      "new_end_time": 1795033260733793,
+      "result_cache_ratio": 0,
+      "order_by": "asc",
+      "order_by_metadata": [
+        [
+          "start_time",
+          "asc"
+        ],
+        [
+          "span_id",
+          "asc"
+        ]
+      ],
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 4.0,
+      "has_more": true,
+      "next_after": {
+        "start_time": "1795033200603151382",
+        "span_id": "b7ad6b7169203331"
+      }
+    }
+  }
+}

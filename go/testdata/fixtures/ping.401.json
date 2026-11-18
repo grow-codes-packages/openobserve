@@ -1,0 +1,19 @@
+{
+  "fixture": "ping.401",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/config",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "www-authenticate": "Bearer realm=\"openobserve\""
+    },
+    "body": "Unauthorized Access"
+  }
+}
