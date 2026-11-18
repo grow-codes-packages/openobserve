@@ -1,0 +1,66 @@
+# OpenObserve real-service fixture for grow-codes-packages/openobserve (GRO-1371, SPEC §8).
+# Image tag and env mirror the Grow stack template (platform agent-core seed gro1285-observability-templates.ts).
+# No host ports: test containers reach http://openobserve:5080 on the compose network and read /bootstrap/env.
+# The template adds test-<lang> services that need only:
+#   environment: GROW_OPENOBSERVE_URL=http://openobserve:5080
+#   volumes: [bootstrap:/bootstrap:ro]
+#   depends_on: { bootstrap: { condition: service_completed_successfully } }
+name: openobserve-sdk
+
+x-root: &root
+  # Test-only credentials for a container that is never published. Override per run with
+  # OPENOBSERVE_ROOT_PASSWORD (the "Gw1-" prefix satisfies the password policy, like the stack template).
+  ZO_ROOT_USER_EMAIL: ${OPENOBSERVE_ROOT_EMAIL:-admin@stack.local}
+  ZO_ROOT_USER_PASSWORD: ${OPENOBSERVE_ROOT_PASSWORD:-Gw1-sdk-fixture-only-7Q}
+
+services:
+  service:   # service under test (harness contract); reachable as `openobserve`
+    networks:
+      default:
+        aliases: [openobserve]
+    image: public.ecr.aws/zinclabs/openobserve:v1.1.2
+    environment:
+      <<: *root
+      ZO_DATA_DIR: /data
+      ZO_LOCAL_MODE: "true"
+      ZO_LOCAL_MODE_STORAGE: disk
+      ZO_TELEMETRY: "false"
+    volumes:
+      - openobserve-data:/data
+    # The image is distroless (no shell/curl). `openobserve node status` calls the local HTTP API
+    # with the root credentials from the env and exits 1 when the server does not answer.
+    healthcheck:
+      test: ["CMD", "/openobserve", "node", "status"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+      start_period: 5s
+    mem_limit: 1g
+
+  bootstrap:
+    image: curlimages/curl:8.23.0
+    user: "0:0"               # the named volume is root-owned; curl_user cannot write to it
+    depends_on:
+      service:
+        condition: service_healthy
+    environment:
+      <<: *root
+      OPENOBSERVE_INTERNAL_URL: http://openobserve:5080
+      OPENOBSERVE_ORG: default
+      OPENOBSERVE_STREAM: sdk_integration
+      OPENOBSERVE_TRACES_STREAM: sdk_traces
+      OPENOBSERVE_SA_EMAIL: sdk-tests@stack.local
+    volumes:
+      - ./bootstrap:/scripts:ro
+      - bootstrap:/bootstrap
+    entrypoint: ["/bin/sh", "/scripts/bootstrap.sh"]
+    healthcheck:
+      test: ["CMD", "test", "-s", "/bootstrap/env"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: "no"
+
+volumes:
+  openobserve-data: {}
+  bootstrap: {}
