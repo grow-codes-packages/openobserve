@@ -1,7 +1,7 @@
 # TypeScript integration tests
 
 A consumer project: it installs the packed `@grow-codes/openobserve` tarball (never the source tree)
-and runs the integration and conformance tests with `node --test` against a real **DISPLAY**.
+and runs the integration and conformance tests with `node --test` against a real OpenObserve.
 
 ```sh
 cd typescript && make pack            # writes dist/grow-codes-openobserve-<version>.tgz
