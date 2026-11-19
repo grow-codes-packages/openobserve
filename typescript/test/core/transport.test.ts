@@ -360,11 +360,11 @@ describe("HttpTransport errors", () => {
     expect(assign).not.toContain("abc");
   });
 
-  it("allowStatus returns the response instead of throwing", async () => {
+  it("allowStatus returns the decoded response instead of throwing", async () => {
     const s = await serve([{ status: 404, body: { message: "nope" } }]);
     const res = await transport(s.url).get("/x", { allowStatus: [404] });
     expect(res.status).toBe(404);
-    expect(res.data).toBeUndefined();
+    expect(res.data).toEqual({ message: "nope" });
   });
 
   it("invalid JSON in a success response is a non-retryable UNAVAILABLE", async () => {
@@ -384,7 +384,7 @@ describe("HttpTransport errors", () => {
     expect((await transport(empty.url).get("/x")).data).toBeUndefined();
   });
 
-  it("requests after close fail with ConfigError; close is idempotent", async () => {
+  it("requests after close fail with CANCELLED; close is idempotent", async () => {
     const s = await serve([{ status: 200 }]);
     const t = transport(s.url);
     await t.get("/x", { responseType: "none" });
@@ -392,7 +392,7 @@ describe("HttpTransport errors", () => {
     await t.close();
     expect(t.closed).toBe(true);
     const err = await failure(t.get("/x"));
-    expect(err.code).toBe("CONFIG");
+    expect(err.code).toBe("CANCELLED");
   });
 });
 

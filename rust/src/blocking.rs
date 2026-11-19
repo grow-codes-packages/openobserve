@@ -1,5 +1,7 @@
 // Skeleton created by sdk-kit 0.1.0; owned by this repository (edit freely).
-//! Blocking wrapper (feature `blocking`). Each client owns a current-thread tokio runtime.
+//! Blocking wrapper (feature `blocking`). Each client owns a tokio runtime with one worker
+//! thread, so background work (log batching, exports, retries' timers) keeps running between
+//! blocking calls.
 //!
 //! Do not use it from inside an async runtime (calls would panic); use the async client there.
 //! The most common calls have blocking twins here; run any other async call with
@@ -28,7 +30,9 @@ pub struct OpenObserveClient {
 impl OpenObserveClient {
     /// Creates a client from a configuration.
     pub fn new(config: OpenObserveConfig) -> Result<Self> {
-        let runtime = tokio::runtime::Builder::new_current_thread()
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(1)
+            .thread_name("grow-openobserve-blocking")
             .enable_all()
             .build()
             .map_err(|e| Error::config("cannot start the tokio runtime").with_source(e))?;

@@ -313,15 +313,3 @@ func TestCaptureTransport(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
-
-// newTestClient is the client constructor the generated core tests use
-// (core_tls_test.go): Basic credentials and fast retries.
-func newTestClient(t *testing.T, url string, mutate func(*Config)) *Client {
-	t.Helper()
-	return newOOClient(t, url, func(cfg *Config) {
-		cfg.Retry = fastRetry(3)
-		if mutate != nil {
-			mutate(cfg)
-		}
-	})
-}
