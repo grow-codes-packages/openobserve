@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -50,7 +51,5 @@ def stream(client: sdk.OpenObserveClient, rid: str) -> Iterator[str]:
     """A fresh log stream name; the stream is deleted after the test when it exists."""
     name = f"sdk_py_{rid}"
     yield name
-    try:
+    with contextlib.suppress(sdk.NotFoundError):
         client.streams.delete_stream(name)
-    except sdk.NotFoundError:
-        pass

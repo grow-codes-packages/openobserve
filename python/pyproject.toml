@@ -53,6 +53,7 @@ dev = [
   "ruff>=0.8",
   "mypy>=1.13",
   "pip-licenses>=5.0",
+  "twine>=6.1",
   "mkdocs>=1.6",
   "mkdocstrings[python]>=0.27",
   "opentelemetry-exporter-otlp-proto-grpc>=1.27,<2",
@@ -99,6 +100,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S", "PLC0415", "N802", "B017", "PT011", "PT018", "N815", "RUF001", "RUF012", "SIM117"]
 "tools/**" = ["S"]
+"integration/**" = ["S", "PLC0415", "N802", "B017", "PT011", "PT018", "N815", "RUF001", "RUF012", "SIM117"]
 # Service modules build OpenObserve SQL: values are quoted with sql_string/sql_ident, and the
 # caller-supplied filter/SQL options are SQL by design.
 "src/grow_openobserve/{logs,traces,log_query}.py" = ["S608"]
