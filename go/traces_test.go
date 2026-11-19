@@ -64,7 +64,7 @@ func TestGetTrace(t *testing.T) {
 		if tr, err := c.Traces().GetTrace(t.Context(), "ffffffffffffffffffffffffffffffff"); err != nil || tr != nil {
 			t.Fatal(tr, err)
 		}
-		if _, err := c.TracesFor("missing").GetTrace(t.Context(), fxTraceID); !errors.Is(err, ErrNotFound) {
+		if _, err := c.TraceQuery("missing").GetTrace(t.Context(), fxTraceID); !errors.Is(err, ErrNotFound) {
 			t.Fatal(err)
 		}
 		if _, err := c.Traces().GetTrace(t.Context(), "not-hex"); !errors.Is(err, ErrValidation) {
@@ -104,7 +104,7 @@ func TestGetTrace(t *testing.T) {
 
 func TestSearchTraces(t *testing.T) {
 	m := newMock(t, map[string][]string{"GET /api/default/" + fxTraces + "/traces/latest": {"searchTraces.latest"}})
-	tr := newOOClient(t, m.URL, nil).TracesFor(fxTraces)
+	tr := newOOClient(t, m.URL, nil).TraceQuery(fxTraces)
 	if tr.Stream() != fxTraces {
 		t.Fatal("stream")
 	}
@@ -145,7 +145,7 @@ func TestSearchTraces(t *testing.T) {
 
 func TestServicesOperationsDependencies(t *testing.T) {
 	m := newMock(t, map[string][]string{"POST /api/default/_search": {"listServices.ok", "listOperations.ok"}})
-	tr := newOOClient(t, m.URL, nil).TracesFor(fxTraces)
+	tr := newOOClient(t, m.URL, nil).TraceQuery(fxTraces)
 	svcs, err := tr.ListServices(t.Context())
 	if err != nil || strings.Join(svcs, ",") != "sdk-a-6moiazbq,sdk-b-6moiazbq" {
 		t.Fatal(svcs, err)
@@ -249,8 +249,8 @@ func TestTracingConfigFor(t *testing.T) {
 	if tc.Endpoint != "http://collector:4318/v1/traces" || tc.Headers["authorization"] != "Basic own" || tc.Headers["Authorization"] != "" || tc.TLS != ca {
 		t.Fatalf("%+v", tc)
 	}
-	if _, err := tracingConfigFor(cfg, TracingConfig{Protocol: ProtocolNative}); !errors.Is(err, ErrConfig) {
-		t.Fatal(err)
+	if tc, err := tracingConfigFor(cfg, TracingConfig{Protocol: ProtocolNative}); err != nil || tc.Protocol != ProtocolHTTPProtobuf || !strings.HasSuffix(tc.Endpoint, "/api/default/v1/traces") {
+		t.Fatalf("native maps to OTLP/HTTP protobuf: %+v %v", tc, err)
 	}
 	if _, err := tracingConfigFor(Config{}, TracingConfig{}); !errors.Is(err, ErrConfig) {
 		t.Fatal(err)
@@ -258,8 +258,10 @@ func TestTracingConfigFor(t *testing.T) {
 	if _, err := InitTracing(t.Context(), Config{}, TracingConfig{ServiceName: "x"}); !errors.Is(err, ErrConfig) {
 		t.Fatal(err)
 	}
-	if _, err := TraceExporterFactory(cfg)(t.Context(), TracingConfig{Protocol: ProtocolNative}); !errors.Is(err, ErrConfig) {
+	if exp, err := TraceExporterFactory(cfg)(t.Context(), TracingConfig{Protocol: ProtocolNative}.WithDefaults()); err != nil {
 		t.Fatal(err)
+	} else {
+		_ = exp.Shutdown(t.Context())
 	}
 	exp, err := TraceExporterFactory(cfg)(t.Context(), TracingConfig{Protocol: ProtocolGRPC}.WithDefaults())
 	if err != nil {

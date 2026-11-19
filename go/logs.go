@@ -218,8 +218,8 @@ type SQLSearchOptions struct {
 	// Start and End bound the search (Unix microseconds on the wire).
 	Start time.Time
 	End   time.Time
-	// From is the row offset; Size the page size (0 = server default). A LIMIT in
-	// the SQL overrides Size.
+	// From is the row offset; Size the page size (0 = DefaultSearchSize, -1 = the
+	// server's default limit). A LIMIT in the SQL overrides Size.
 	From int
 	Size int
 	// TrackTotalHits also runs a count request and fills SQLSearchResult.Total.
@@ -285,6 +285,9 @@ func (c *Client) searchRaw(ctx context.Context, op, sql string, start, end time.
 	return w, err
 }
 
+// DefaultSearchSize is the page size of Logs.Search when SQLSearchOptions.Size is 0.
+const DefaultSearchSize = 100
+
 // Search runs an OpenObserve SQL query (POST /api/{org}/_search). Find text with
 // match_all('x'), str_match(field, 'x') or re_match(field, 'regex'); quote
 // reserved stream names ("default").
@@ -297,7 +300,11 @@ func (l *Logs) Search(ctx context.Context, sql string, opts SQLSearchOptions) (S
 	if err != nil {
 		return SQLSearchResult{}, err
 	}
-	w, err := l.c.searchRaw(ctx, op, sql, start, end, opts.From, opts.Size, false, opts.StreamType)
+	size := opts.Size
+	if size == 0 {
+		size = DefaultSearchSize
+	}
+	w, err := l.c.searchRaw(ctx, op, sql, start, end, opts.From, size, false, opts.StreamType)
 	if err != nil {
 		return SQLSearchResult{}, err
 	}
@@ -489,4 +496,87 @@ func parseBucketTime(s string) time.Time {
 		return fromMicros(us)
 	}
 	return time.Time{}
+}
+
+// LogTailOptions configure Logs.Tail. The zero value polls every second from
+// now with a 1 s overlap and 1000 rows per request.
+type LogTailOptions struct {
+	// Filter is an optional SQL condition, for example match_all('error').
+	Filter string
+	// Start is the earliest row timestamp delivered (default now).
+	Start time.Time
+	// Interval is the poll interval (default 1 s).
+	Interval time.Duration
+	// Overlap is how far each poll re-reads before the cursor to catch late rows
+	// (default 1 s, never before Start); duplicates are dropped.
+	Overlap time.Duration
+	// PageSize is the number of rows per poll request (default 1000).
+	PageSize int
+	// StreamType is the type of the tailed stream (default logs).
+	StreamType StreamType
+	// OnError is called for a failed poll; tailing continues. Default: a debug
+	// log line on the client logger.
+	OnError func(error)
+}
+
+// Tail follows stream by polling _search with a _timestamp cursor (OpenObserve
+// has no live tail) and calls onRow for every new row, oldest first, until the
+// handle is stopped or ctx is done. Every poll re-reads opts.Overlap before the
+// cursor (never before opts.Start) and drops rows it already delivered by
+// full-row equality, so exact duplicates within that window are delivered once.
+func (l *Logs) Tail(ctx context.Context, stream string, onRow func(row map[string]any), opts LogTailOptions) (TailHandle, error) {
+	const op = "logs.tail"
+	s, err := streamArg(op, stream)
+	if err != nil {
+		return nil, err
+	}
+	if onRow == nil {
+		return nil, ValidationError(op, "onRow is required")
+	}
+	where := ""
+	if f := strings.TrimSpace(opts.Filter); f != "" {
+		where = " AND (" + f + ")"
+	}
+	ident := sqlIdent(s)
+	return l.c.startTail(ctx, &rowTailer{
+		sqlFor: func(from int64) string {
+			return "SELECT * FROM " + ident + " WHERE _timestamp >= " + strconv.FormatInt(from, 10) + where + " ORDER BY _timestamp ASC"
+		},
+		typ:      opts.StreamType.orLogs(),
+		pageSize: opts.PageSize,
+		overlap:  opts.Overlap.Microseconds(),
+		onRow:    onRow,
+		onError:  opts.OnError,
+	}, opts.Start, opts.Interval), nil
+}
+
+// OTLPIngestResult is the outcome of Logs.IngestOTLP.
+type OTLPIngestResult struct {
+	// Accepted is the number of records stored.
+	Accepted int `json:"accepted"`
+	// Rejected is the number of records the server reported in partialSuccess.
+	Rejected int `json:"rejected"`
+}
+
+// OTLPIngestOptions configure Logs.IngestOTLP.
+type OTLPIngestOptions struct {
+	// Stream is the target stream ("" = Config.Stream).
+	Stream string
+	// Gzip compresses the request body.
+	Gzip bool
+}
+
+// IngestOTLP writes SDK log records as OTLP/HTTP JSON (POST /api/{org}/v1/logs
+// with the stream-name header). The server stores body, severity,
+// severity_number, trace_id, span_id and the flattened attributes; trace flags
+// are not stored. An empty slice sends nothing.
+func (l *Logs) IngestOTLP(ctx context.Context, records []LogRecord, opts OTLPIngestOptions) (OTLPIngestResult, error) {
+	if len(records) == 0 {
+		return OTLPIngestResult{}, nil
+	}
+	res, err := l.c.NewOTLPLogExporter(opts.Stream).Export(ctx, records, ExportOptions{Gzip: opts.Gzip})
+	if err != nil {
+		return OTLPIngestResult{}, err
+	}
+	return OTLPIngestResult{Accepted: res.Accepted, Rejected: res.Rejected}, nil
 }

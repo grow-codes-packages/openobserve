@@ -663,15 +663,15 @@ async fn tail_polls_with_cursor_and_dedupes() {
         .to_string();
     assert!(sql.contains("AND (match_all('x'))"), "{sql}");
     assert!(sql.contains("ORDER BY _timestamp ASC"));
-    // second page request starts again from the advanced cursor minus the overlap
+    // the overlap window never reaches back before `start`
+    assert!(sql.contains(&format!("_timestamp >= {now} ")), "{sql}");
+    assert_eq!(json_body(&reqs[0])["query"]["start_time"], now);
+    // the second page starts from the advanced cursor minus the overlap, clamped to `start`
     let sql2 = json_body(&reqs[1])["query"]["sql"]
         .as_str()
         .unwrap()
         .to_string();
-    assert!(
-        sql2.contains(&format!(">= {}", now + 2 - 1_000_000)),
-        "{sql2}"
-    );
+    assert!(sql2.contains(&format!("_timestamp >= {now} ")), "{sql2}");
     assert!(logs
         .tail("  ", Arc::new(|_| {}), LogTailOptions::default())
         .is_err());

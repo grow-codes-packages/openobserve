@@ -120,7 +120,7 @@ class StreamsTest {
         "{\"name\":\"s\",\"settings\":{\"partition_keys\":{\"L0\":{\"field\":\"old\",\"types\":\"value\"},"
             + "\"L1\":{\"field\":\"gone\",\"types\":\"value\",\"disabled\":true},"
             + "\"L2\":{\"field\":\"keep\",\"types\":\"value\"}},"
-            + "\"full_text_search_keys\":[\"log\",\"msg\"]}}");
+            + "\"full_text_search_keys\":[\"log\",\"msg\"],\"index_fields\":[\"level\"]}}");
     Fixtures.enqueue(server, "updateStreamSettings.ok");
     streams.updateStreamSettings(
         "s",
@@ -128,6 +128,8 @@ class StreamsTest {
             .retentionDays(7)
             .fullTextSearchKeys(List.of("message", "msg", "message"))
             .partitionKeys(List.of(PartitionKey.of("run_id"), PartitionKey.of("keep")))
+            .indexFields(List.of("level"))
+            .bloomFilterFields(List.of("trace_id"))
             .build());
     assertThat(server.requests().get(0).uri()).isEqualTo("/api/default/streams/s/schema?type=logs");
     MockServer.Recorded put = server.requests().get(1);
@@ -140,6 +142,9 @@ class StreamsTest {
     assertThat(b.get("partition_keys").get("add").get(0).get("field").asText()).isEqualTo("run_id");
     assertThat(b.get("partition_keys").get("remove").get(0).get("field").asText()).isEqualTo("old");
     assertThat(b.get("partition_keys").get("remove")).hasSize(1);
+    assertThat(b.has("index_fields")).isFalse();
+    assertThat(b.get("bloom_filter_fields").toString())
+        .isEqualTo("{\"add\":[\"trace_id\"],\"remove\":[]}");
   }
 
   @Test

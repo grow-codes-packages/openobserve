@@ -36,10 +36,10 @@ type Traces struct {
 var _ TraceQueryClient = (*Traces)(nil)
 
 // Traces returns the TraceQueryClient for Config.TracesStream.
-func (c *Client) Traces() *Traces { return c.TracesFor("") }
+func (c *Client) Traces() *Traces { return c.TraceQuery("") }
 
-// TracesFor returns the TraceQueryClient for stream ("" = Config.TracesStream).
-func (c *Client) TracesFor(stream string) *Traces {
+// TraceQuery returns the TraceQueryClient for stream ("" = Config.TracesStream).
+func (c *Client) TraceQuery(stream string) *Traces {
 	if stream == "" {
 		stream = c.cfg.TracesStream
 	}
@@ -366,7 +366,9 @@ func tracingConfigFor(cfg Config, tc TracingConfig) (TracingConfig, error) {
 	}
 	cfg = cfg.withDefaults()
 	if tc.Protocol == ProtocolNative {
-		return tc, ConfigError("tracing: OpenObserve takes OTLP (http/protobuf or grpc), not a native protocol")
+		// OpenObserve's own ingestion format is OTLP over HTTP; the official Go
+		// exporter encodes it as protobuf (OTLP/JSON is TypeScript/Rust only).
+		tc.Protocol = ProtocolHTTPProtobuf
 	}
 	base, _ := url.Parse(cfg.URL) // validated above
 	if tc.Endpoint == "" {

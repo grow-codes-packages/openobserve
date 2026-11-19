@@ -19,10 +19,15 @@ Python and Java** — one API, five idiomatic packages, tested against a real Op
 
 - **Typed client** with timeouts, retries with jitter, `Retry-After`, cancellation and one error
   model (`OpenObserveError` with canonical codes) in every language.
-- **Secrets stay secret**: credentials are redacted in `toString`, logs, hooks and error messages.
+- **Secrets stay secret**: passwords, service-account tokens and passcodes are redacted in
+  `toString`, logs, hooks and error messages.
+- **OpenObserve API**: log ingestion (`_json`, `_multi`, Elasticsearch `_bulk`, OTLP), SQL search
+  with microsecond time ranges, `_around`, `_values`, histograms, a polling tail, stream schema and
+  settings, trace queries, organizations and service accounts.
 - **Logging**: batched, compressed log shipping with back-pressure, redaction, a logger facade and
-  adapters for the common logging frameworks of each language; log search where OpenObserve offers it.
-- **Tracing**: OpenTelemetry setup in one call, span helpers, context propagation, framework
+  adapters for the common logging frameworks of each language; log search and tail.
+- **Tracing**: OpenTelemetry setup in one call (OTLP/HTTP to `/api/{org}/v1/traces` with Basic auth
+  and the `stream-name` header, or OTLP/gRPC), span helpers, context propagation, framework
   middleware and a trace query client.
 
 ## Contents
@@ -42,8 +47,10 @@ Python and Java** — one API, five idiomatic packages, tested against a real Op
 
 ## Supported service version
 
-Tested in CI against **`public.ecr.aws/zinclabs/openobserve:v1.1.2`** (the version pinned in the Grow Codes stack catalog). Other
-versions with the same API usually work; see [Compatibility](#compatibility) and
+Tested in CI against **OpenObserve `v1.1.2`** (`public.ecr.aws/zinclabs/openobserve:v1.1.2`, the
+version pinned in the Grow Codes stack catalog). The SDK uses the open-source HTTP API (and OTLP);
+enterprise-only routes such as the service graph are reported as `UNSUPPORTED`. Other versions
+with the same API usually work; see [Compatibility](#compatibility) and
 [docs/compatibility.md](docs/compatibility.md).
 
 ## Install
@@ -51,9 +58,9 @@ versions with the same API usually work; see [Compatibility](#compatibility) and
 | Language | Package | Install |
 | - | - | - |
 | TypeScript (Node.js ≥ 22.12) | `@grow-codes/openobserve` | `npm install @grow-codes/openobserve` |
-| Rust (MSRV 1.85) | `grow-openobserve` | `cargo add grow-openobserve` |
+| Rust (MSRV 1.88) | `grow-openobserve` | `cargo add grow-openobserve` |
 | Go (1.26+) | `github.com/grow-codes-packages/openobserve/go` | `go get github.com/grow-codes-packages/openobserve/go` |
-| Python (≥ 3.10) | `grow-openobserve` | `pip install grow-openobserve` |
+| Python (≥ 3.10) | `grow-openobserve` | `pip install grow-openobserve` (`grow-openobserve[grpc]` for OTLP/gRPC) |
 | Java (17+) | `codes.grow.packages:openobserve` | see below |
 
 Maven:
@@ -74,20 +81,32 @@ implementation("codes.grow.packages:openobserve:0.1.0")
 
 ## Quickstart
 
-Every package reads its configuration from the environment (`GROW_OPENOBSERVE_URL`,
-`GROW_OPENOBSERVE_TOKEN`, …, see [Configuration](#configuration)) or from an explicit config
-object. The examples check the service health and make one authenticated call.
+Every package reads its configuration from the environment or from an explicit config object.
+OpenObserve uses HTTP Basic auth: set `OPENOBSERVE_URL`, `OPENOBSERVE_USER` and either
+`OPENOBSERVE_PASSWORD` or a service-account `OPENOBSERVE_TOKEN` (see
+[Configuration](#configuration)). The examples check the health, write two log records, read them
+back with SQL and send one trace.
 
 ### TypeScript
 
 ```ts
-import { OpenObserveClient } from "@grow-codes/openobserve";
+import { OpenObserveClient, withSpan } from "@grow-codes/openobserve";
 
 const client = OpenObserveClient.fromEnv();
 try {
-  const health = await client.health();
-  console.log(health.healthy, health.status);
-  console.log("latency ms:", await client.ping());
+  console.log((await client.health()).status, await client.serverVersion());
+  await client.logs.ingestJson("app", [
+    { message: "checkout started", level: "info" },
+    { message: "payment failed", level: "error" },
+  ]);
+  const res = await client.logs.search(`SELECT * FROM "app" WHERE level = 'error'`, {
+    trackTotalHits: true,
+  });
+  console.log(res.totalHits, res.hits[0]?.message);
+
+  const tracing = client.initTracing({ serviceName: "checkout" });
+  await withSpan("checkout", async () => {});
+  await tracing.shutdown(); // flushes the spans
 } finally {
   await client.close();
 }
@@ -96,14 +115,35 @@ try {
 ### Rust
 
 ```rust
+use grow_openobserve::logs::{IngestOptions, SearchOptions};
+use grow_openobserve::tracing::TracingConfig;
 use grow_openobserve::OpenObserveClient;
+use serde_json::json;
 
 #[tokio::main]
-async fn main() -> Result<(), grow_openobserve::Error> {
+async fn main() -> grow_openobserve::Result<()> {
     let client = OpenObserveClient::from_env()?;
-    let health = client.health().await?;
-    println!("{} {}", health.healthy, health.status);
-    println!("latency: {:?}", client.ping().await?);
+    println!("{} {}", client.health().await?.status, client.server_version().await?);
+    let logs = client.logs();
+    logs.ingest_json(
+        "app",
+        &[
+            json!({"message": "checkout started", "level": "info"}),
+            json!({"message": "payment failed", "level": "error"}),
+        ],
+        IngestOptions::default(),
+    )
+    .await?;
+    let res = logs
+        .search(
+            "SELECT * FROM \"app\" WHERE level = 'error'",
+            SearchOptions::default().track_total_hits(true),
+        )
+        .await?;
+    println!("{:?} {:?}", res.total_hits, res.hits.first());
+
+    let tracing = client.init_tracing(TracingConfig::new("checkout"), None)?;
+    tracing.shutdown().await?; // flushes the spans
     client.close().await;
     Ok(())
 }
@@ -130,23 +170,54 @@ func main() {
 	}
 	defer client.Close()
 
-	health, err := client.Health(ctx)
+	health, _ := client.Health(ctx)
+	fmt.Println(health.Status)
+	if _, err := client.Logs().IngestJSON(ctx, "app", []map[string]any{
+		{"message": "checkout started", "level": "info"},
+		{"message": "payment failed", "level": "error"},
+	}); err != nil {
+		log.Fatal(err)
+	}
+	res, err := client.Logs().Search(ctx, `SELECT * FROM "app" WHERE level = 'error'`,
+		openobserve.SQLSearchOptions{TrackTotalHits: true})
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(health.Healthy, health.Status)
+	fmt.Println(*res.Total, len(res.Hits))
+
+	tracing, err := client.InitTracing(ctx, openobserve.TracingConfig{ServiceName: "checkout"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	_, span := tracing.Tracer("app").Start(ctx, "checkout")
+	span.End()
+	_ = tracing.Shutdown(ctx) // flushes the spans
 }
 ```
 
 ### Python
 
 ```python
-from grow_openobserve import OpenObserveClient
+from grow_openobserve import OpenObserveClient, TracingConfig, with_span
 
 with OpenObserveClient.from_env() as client:
-    health = client.health()
-    print(health.healthy, health.status)
-    print("latency ms:", client.ping())
+    print(client.health().status, client.server_version())
+    client.logs.ingest_json(
+        "app",
+        [
+            {"message": "checkout started", "level": "info"},
+            {"message": "payment failed", "level": "error"},
+        ],
+    )
+    res = client.logs.search(
+        "SELECT * FROM \"app\" WHERE level = 'error'", track_total_hits=True
+    )
+    print(res.total_hits, res.hits[0]["message"] if res.hits else None)
+
+    tracing = client.init_tracing(TracingConfig(service_name="checkout"))
+    with with_span("checkout"):
+        pass
+    tracing.shutdown()  # flushes the spans
 ```
 
 Async code uses `AsyncOpenObserveClient` with the same methods (`async with`, `await client.health()`).
@@ -155,11 +226,23 @@ Async code uses `AsyncOpenObserveClient` with the same methods (`async with`, `a
 
 ```java
 import codes.grow.packages.openobserve.OpenObserveClient;
+import codes.grow.packages.openobserve.logs.SqlSearchOptions;
+import codes.grow.packages.openobserve.tracing.TracingConfig;
+import java.util.List;
+import java.util.Map;
 
 try (OpenObserveClient client = OpenObserveClient.fromEnv()) {
-    var health = client.health();
-    System.out.println(health.healthy() + " " + health.status());
-    System.out.println("latency ms: " + client.ping());
+    System.out.println(client.health().status() + " " + client.serverVersion());
+    client.logs().ingestJson("app", List.of(
+        Map.of("message", "checkout started", "level", "info"),
+        Map.of("message", "payment failed", "level", "error")));
+    var res = client.logs().search("SELECT * FROM \"app\" WHERE level = 'error'",
+        SqlSearchOptions.builder().trackTotalHits(true).build());
+    System.out.println(res.total() + " " + res.hits());
+
+    var tracing = client.initTracing(TracingConfig.builder("checkout").build());
+    tracing.tracer("app").spanBuilder("checkout").startSpan().end();
+    tracing.shutdown(); // flushes the spans
 }
 ```
 
@@ -168,13 +251,18 @@ More complete programs live in [examples/](examples/) — one folder per languag
 ## Configuration
 
 All settings can be passed in code or through environment variables. Precedence: **explicit value >
-`GROW_OPENOBSERVE_*` variable > vendor variable > default.** A present but invalid value raises a
-`ConfigError` that names the variable (never its value).
+`GROW_OPENOBSERVE_*` variable > `OPENOBSERVE_*` variable > default.** A present but invalid value
+raises a `ConfigError` that names the variable (never its value).
 
-| Setting | Environment variable | Default |
+| Setting | Environment variables | Default |
 | - | - | - |
-| `url` | `GROW_OPENOBSERVE_URL` | service default |
-| `token` | `GROW_OPENOBSERVE_TOKEN` | none |
+| `url` | `GROW_OPENOBSERVE_URL`, `OPENOBSERVE_URL` | `http://127.0.0.1:5080` |
+| `org` — organization | `GROW_OPENOBSERVE_ORG`, `OPENOBSERVE_ORG` | `default` |
+| `user` — Basic-auth e-mail (root, user or service account) | `GROW_OPENOBSERVE_USER`, `OPENOBSERVE_USER` | none |
+| `password` (secret) | `GROW_OPENOBSERVE_PASSWORD`, `OPENOBSERVE_PASSWORD` | none |
+| `token` (secret) — service-account token, or a pre-encoded `Basic …` value | `GROW_OPENOBSERVE_TOKEN`, `OPENOBSERVE_TOKEN` | none |
+| `stream` — default log stream | `GROW_OPENOBSERVE_STREAM`, `OPENOBSERVE_STREAM` | `default` |
+| `tracesStream` — default traces stream | `GROW_OPENOBSERVE_TRACES_STREAM`, `OPENOBSERVE_TRACES_STREAM` | `default` |
 | `connectTimeout` | `GROW_OPENOBSERVE_CONNECT_TIMEOUT` | 10 s |
 | `requestTimeout` (per attempt) | `GROW_OPENOBSERVE_REQUEST_TIMEOUT` | 30 s |
 | `totalTimeout` (including retries) | `GROW_OPENOBSERVE_TOTAL_TIMEOUT` | 120 s |
@@ -185,25 +273,127 @@ All settings can be passed in code or through environment variables. Precedence:
 | `proxy` | `GROW_OPENOBSERVE_PROXY` | none (environment proxies are ignored) |
 | `headers`, `userAgentSuffix`, `hooks`, `logger` | — | none |
 
-Vendor variables that are also read: `OPENOBSERVE_URL`, `OPENOBSERVE_ORG` (default `default`), `OPENOBSERVE_USER`, `OPENOBSERVE_PASSWORD` or `OPENOBSERVE_TOKEN`, `OPENOBSERVE_STREAM`, `GROW_OPENOBSERVE_*`.
+Authentication rules (identical in every language):
+
+- OpenObserve accepts **HTTP Basic** only (`Bearer` is rejected). `user` + `password` sends
+  `Basic base64(user:password)`; `user` + `token` sends `Basic base64(user:token)` (a service
+  account's token works only with its own e-mail).
+- A `token` that starts with `Basic ` is a pre-encoded header and is sent as is (no `user` needed).
+- `password` and `token` are mutually exclusive; `user` needs one of them. Without credentials only
+  `health()` works.
+- Stream names are normalized like the server does: lower case, every character other than
+  `[a-z0-9_]` becomes `_`.
 
 Durations accept milliseconds (`1500`) or units (`500ms`, `10s`, `1m30s`); booleans accept
 `true/false/1/0/yes/no/on/off`. Field names follow each language's convention
-(`request_timeout` in Python and Rust, `RequestTimeout` in Go). The full reference is in the
-[documentation](https://grow-codes-packages.github.io/openobserve/).
+(`traces_stream` in Python and Rust, `TracesStream` in Go). The full reference is in
+[docs/configuration.md](docs/configuration.md).
 
 ## Function overview
 
 <!-- service:function-overview — the service fills this section; keep the heading. -->
 
-The same functions exist in every language, named per language convention (`getString` in
-TypeScript and Java, `get_string` in Python and Rust, `GetString` in Go).
+The same functions exist in every language, named per language convention (`ingestJson` in
+TypeScript and Java, `ingest_json` in Python and Rust, `IngestJSON` in Go). Every function has a
+page with all five languages in the [documentation](https://grow-codes-packages.github.io/openobserve/functions/).
 
-| Area | Functions | Description |
-| - | - | - |
-| Client | `health`, `ping`, `serverVersion`, `close` | liveness, authenticated round trip, server version, shutdown |
-| Logging | `send`, `sendBatch`, `flush`, `close`, `stats`, `logger`, `search`, `tail`, `listStreams`, `listLabels`, `waitForLog` | log shipping and querying |
-| Tracing | `initTracing`, `withSpan`, `traced`, `inject`, `extract`, `getTrace`, `searchTraces`, `listServices`, `listOperations`, `getDependencies`, `waitForTrace` | OpenTelemetry setup and trace queries |
+### Client and status
+
+| Function | Description |
+| - | - |
+| `fromEnv()` / constructor | build from `GROW_OPENOBSERVE_*` / `OPENOBSERVE_*` or an explicit config |
+| `health()` | unauthenticated `GET /healthz`; never throws for an unhealthy or unreachable service |
+| `ping()` | authenticated `GET /api/{org}/config`; returns the latency |
+| `serverVersion()` | version from `/api/{org}/config` (e.g. `v1.1.2`); `UNSUPPORTED` when missing |
+| `close()` | idempotent; flushes every log client made by the client |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `await client.serverVersion()` | `client.server_version().await?` | `client.ServerVersion(ctx)` | `client.server_version()` | `client.serverVersion()` |
+
+### Logs ingestion (`client.logs`)
+
+| Function | Description |
+| - | - |
+| `ingestJson(stream, records)` | `POST /api/{org}/{stream}/_json`; per-stream counters (HTTP 200 even on partial failure) |
+| `ingestMulti(stream, ndjson)` | `POST /api/{org}/{stream}/_multi` (newline-delimited JSON) |
+| `ingestBulk(actions)` | Elasticsearch-compatible `POST /api/{org}/_bulk`; only `index`/`create` (others → `VALIDATION`) |
+| `ingestOtlp(stream, records)` | SDK `LogRecord`s as OTLP/HTTP JSON to `/api/{org}/v1/logs` with `stream-name` |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `await client.logs.ingestJson("app", [{ message: "hi" }])` | `logs.ingest_json("app", &[json!({"message": "hi"})], IngestOptions::default()).await?` | `client.Logs().IngestJSON(ctx, "app", []map[string]any{{"message": "hi"}})` | `client.logs.ingest_json("app", [{"message": "hi"}])` | `client.logs().ingestJson("app", List.of(Map.of("message", "hi")))` |
+
+### Search (`client.logs`)
+
+| Function | Description |
+| - | - |
+| `search(sql, {start, end, from, size, trackTotalHits})` | `POST /api/{org}/_search` with a µs time range (default last 15 min, size 100); `trackTotalHits` adds the exact count |
+| `searchAround(stream, timestamp, size)` | rows around one timestamp (`_around`), anchor included |
+| `valuesOf(stream, fields, {start, end})` | most frequent values per field (`_values`) |
+| `histogram(stream, {start, end, interval, filter})` | record counts per time bucket |
+| `tail(stream, onRow, {filter, start, interval, overlap})` | follows a stream by polling with a `_timestamp` cursor (OpenObserve has no live tail) |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `await client.logs.search(sql, { trackTotalHits: true })` | `logs.search(sql, SearchOptions::default().track_total_hits(true)).await?` | `client.Logs().Search(ctx, sql, openobserve.SQLSearchOptions{TrackTotalHits: true})` | `client.logs.search(sql, track_total_hits=True)` | `client.logs().search(sql, SqlSearchOptions.builder().trackTotalHits(true).build())` |
+
+### Streams (`client.streams`)
+
+| Function | Description |
+| - | - |
+| `listStreams(type)` | streams of one type with schema, settings and stats |
+| `getStreamSchema(stream)` | fields, settings and stats; `NOT_FOUND` for a missing stream |
+| `updateStreamSettings(stream, {retentionDays, partitionKeys, fullTextSearchKeys, indexFields, bloomFilterFields})` | a list replaces the current value (the SDK sends the add/remove deltas) |
+| `createStream(stream, {fields, settings})` | creates a stream ahead of the first write |
+| `deleteStream(stream)` | deletes a stream and its data |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `await client.streams.updateStreamSettings("app", { retentionDays: 7 })` | `streams.update_stream_settings("app", StreamSettingsUpdate { retention_days: Some(7), ..Default::default() }, StreamType::Logs).await?` | `client.Streams().UpdateStreamSettings(ctx, "app", openobserve.StreamSettingsUpdate{RetentionDays: &days})` | `client.streams.update_stream_settings("app", retention_days=7)` | `client.streams().updateStreamSettings("app", StreamSettingsUpdate.builder().retentionDays(7).build())` |
+
+### Tracing (`initTracing`, `client.traces`)
+
+| Function | Description |
+| - | - |
+| `initTracing(config)` / `client.initTracing(config)` | OpenTelemetry SDK with the OpenObserve exporter (OTLP/HTTP protobuf by default, OTLP/gRPC on 5081) |
+| `getTrace(traceId)` | all spans of a trace (default window 7 days, paginated); `null` when unknown |
+| `searchTraces({service, operation, tags, minDuration, maxDuration, start, end, limit})` | trace summaries from `traces/latest` (default last 1 h) |
+| `listServices()`, `listOperations(service)` | distinct services / span names (last 24 h) |
+| `getDependencies(range)` | `UNSUPPORTED` (enterprise only) |
+| `waitForTrace(traceId)`, `traceTimeRange(traceId)` | test helper; where and when a trace is stored |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `await client.traces.getTrace(id)` | `client.traces().get_trace(&id).await?` | `client.Traces().GetTrace(ctx, id)` | `client.traces.get_trace(trace_id)` | `client.traces().getTrace(id)` |
+
+The span helpers (`withSpan`, `traced`, `currentTraceId`, `inject`/`extract`, `traceFields`) and the
+framework adapters are documented in [docs/tracing.md](docs/tracing.md).
+
+### Logging category
+
+| Function | Description |
+| - | - |
+| `logClient({stream, protocol})` | batching `LogClient` (`_json` or OTLP) with redaction, trace correlation and a `Logger` |
+| `logExporter(stream, protocol)` | the `LogExporter` behind it (Go: `NewJSONLogExporter` / `NewOTLPLogExporter`) |
+| `logQuery(stream)` | `LogQueryClient`: `search` (text → `match_all`, `SELECT …` → raw SQL), `tail`, `listStreams`, `listLabels`, `waitForLog` |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `client.logClient({ stream: "app" }).logger("api").info("hi")` | `client.log_client(LogClientOptions::default().stream("app"))?` | `client.NewLogClient("app", openobserve.LogClientOptions{})` | `client.log_client("app").logger("api").info("hi")` | `client.logClient(LogClientOptions.builder().stream("app").build())` |
+
+### Admin helpers (`client.admin`)
+
+| Function | Description |
+| - | - |
+| `listOrganizations()` | organizations visible to the user |
+| `createServiceAccount(email)`, `rotateServiceAccountToken(email)` | the token is returned once, as a redacted secret |
+| `listServiceAccounts()`, `deleteServiceAccount(email)` | listed tokens are masked by the server |
+| `getPasscode()` | the user's ingestion passcode (secret) |
+
+| TypeScript | Rust | Go | Python | Java |
+| - | - | - | - | - |
+| `await client.admin.createServiceAccount("ci@example.com")` | `client.admin().create_service_account("ci@example.com", Default::default()).await?` | `client.Admin().CreateServiceAccount(ctx, "ci@example.com", openobserve.ServiceAccountOptions{})` | `client.admin.create_service_account("ci@example.com")` | `client.admin().createServiceAccount("ci@example.com")` |
 
 <!-- /service:function-overview -->
 
@@ -226,12 +416,15 @@ stack is always removed afterwards (`docker compose down -v`). Unit tests need n
 
 | | TypeScript | Rust | Go | Python | Java |
 | - | - | - | - | - | - |
-| Runtime | Node.js ≥ 22.12, ESM + CJS | stable, MSRV 1.85 | 1.26, 1.27 | 3.10 – 3.14 | 17, 21, 25 |
+| Runtime | Node.js ≥ 22.12, ESM + CJS | stable, MSRV 1.88 | 1.26, 1.27 | 3.10 – 3.14 | 17, 21, 25 |
 | Async | `Promise` + `AbortSignal` | `async` (tokio), `blocking` feature | `context.Context` | sync + `asyncio` | sync + `CompletableFuture` |
-| OpenObserve | `public.ecr.aws/zinclabs/openobserve:v1.1.2` | `public.ecr.aws/zinclabs/openobserve:v1.1.2` | `public.ecr.aws/zinclabs/openobserve:v1.1.2` | `public.ecr.aws/zinclabs/openobserve:v1.1.2` | `public.ecr.aws/zinclabs/openobserve:v1.1.2` |
+| OpenObserve | v1.1.2 | v1.1.2 | v1.1.2 | v1.1.2 | v1.1.2 |
+| Tracing `native` protocol | OTLP/HTTP JSON | OTLP/HTTP JSON | OTLP/HTTP protobuf | OTLP/HTTP protobuf | OTLP/HTTP protobuf |
 
-Functions that OpenObserve (or its emulator) cannot serve are listed with the reason in
-[docs/compatibility.md](docs/compatibility.md).
+Not servable by the open-source container (covered by unit tests only): `getDependencies`
+(enterprise service graph), OTLP `partialSuccess`, 429/5xx retries, TLS/proxy and the OTLP/gRPC
+exporter. Server quirks (for example, `_around` ignores its `sql` filter and `start_time=0` is
+rejected) and language differences are listed in [docs/compatibility.md](docs/compatibility.md).
 
 ## Contributing
 
@@ -252,7 +445,7 @@ Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) 
 ## Trademarks and disclaimer
 
 This is an independent, community-maintained project. It is **not affiliated with, endorsed or
-sponsored by ZincLabs, Inc.**. OpenObserve is a trademark of ZincLabs, Inc.; it is used here only to name the
+sponsored by ZincLabs, Inc.** OpenObserve is a trademark of ZincLabs, Inc.; it is used here only to name the
 service this SDK connects to. The OpenObserve server is licensed separately by its owner
 (AGPL-3.0-only (open core)).
 

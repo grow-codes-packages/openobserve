@@ -3,8 +3,10 @@ package openobserve
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -149,7 +151,7 @@ func TestSearch(t *testing.T) {
 	end := time.UnixMicro(1795033260490792)
 
 	t.Run("rows and request shape", func(t *testing.T) {
-		res, err := c.Logs().Search(t.Context(), "SELECT * FROM x", SQLSearchOptions{Start: start, End: end, From: 0, Size: 100})
+		res, err := c.Logs().Search(t.Context(), "SELECT * FROM x", SQLSearchOptions{Start: start, End: end})
 		if err != nil || len(res.Hits) != 5 || res.Total != nil || res.SearchID == "" || res.ScanRecords != 5 || res.Took != 5 || res.Size != 100 {
 			t.Fatalf("%+v %v", res, err)
 		}
@@ -161,7 +163,7 @@ func TestSearch(t *testing.T) {
 			t.Fatal(r.Query)
 		}
 		q := jsonBody(t, r).(map[string]any)["query"].(map[string]any)
-		if q["start_time"].(json.Number).String() != "1795029600490792" || q["end_time"].(json.Number).String() != "1795033260490792" || q["sql"] != "SELECT * FROM x" {
+		if q["start_time"].(json.Number).String() != "1795029600490792" || q["end_time"].(json.Number).String() != "1795033260490792" || q["sql"] != "SELECT * FROM x" || q["size"].(json.Number).String() != "100" {
 			t.Fatalf("%v", q)
 		}
 		if _, ok := q["track_total_hits"]; ok {
@@ -359,4 +361,103 @@ func TestHelpers(t *testing.T) {
 	if toFloat(json.Number("1.5")) != 1.5 || toFloat("x") != 0 {
 		t.Fatal("toFloat")
 	}
+}
+
+func TestLogsIngestOTLP(t *testing.T) {
+	m := newMock(t, map[string][]string{"POST /api/default/v1/logs": {"otlpLogs.json"}})
+	c := newOOClient(t, m.URL, nil)
+	if res, err := c.Logs().IngestOTLP(t.Context(), nil, OTLPIngestOptions{Stream: "s"}); err != nil || res != (OTLPIngestResult{}) {
+		t.Fatalf("empty: %+v %v", res, err)
+	}
+	if len(m.requests()) != 0 {
+		t.Fatal("empty batch must not send")
+	}
+	res, err := c.Logs().IngestOTLP(t.Context(), []LogRecord{sampleRecord(), sampleRecord()}, OTLPIngestOptions{Stream: "Otlp.S", Gzip: true})
+	if err != nil || res.Accepted != 2 || res.Rejected != 0 {
+		t.Fatalf("%+v %v", res, err)
+	}
+	if r := m.last(); r.Header.Get("Stream-Name") != "otlp_s" || !r.Gzip {
+		t.Fatal(r.Header)
+	}
+	bm := newMock(t, map[string][]string{"POST /api/default/v1/logs": {"otlpLogs.401"}})
+	if _, err := newOOClient(t, bm.URL, nil).Logs().IngestOTLP(t.Context(), []LogRecord{{}}, OTLPIngestOptions{}); !errors.Is(err, ErrAuthentication) {
+		t.Fatal(err)
+	}
+}
+
+func TestLogsTail(t *testing.T) {
+	var mu sync.Mutex
+	polls := 0
+	base := time.Now().Add(time.Second)
+	row := func(i int) string {
+		return fmt.Sprintf(`{"_timestamp":%d,"message":"row %d"}`, base.Add(time.Duration(i)*time.Millisecond).UnixMicro(), i)
+	}
+	m := newMock(t, nil)
+	m.handle("POST /api/default/_search", func(w http.ResponseWriter, _ *http.Request) {
+		mu.Lock()
+		polls++
+		n := polls
+		mu.Unlock()
+		switch n {
+		case 1:
+			old := fmt.Sprintf(`{"_timestamp":%d,"message":"old"}`, base.Add(-time.Hour).UnixMicro())
+			_, _ = w.Write([]byte(`{"hits":[` + old + `,` + row(0) + `,` + row(1) + `]}`))
+		case 2:
+			_, _ = w.Write([]byte(`{"hits":[` + row(1) + `,` + row(2) + `]}`))
+		case 3:
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`{"code":400,"message":"bad sql"}`))
+		default:
+			_, _ = w.Write([]byte(`{"hits":[]}`))
+		}
+	})
+	c := newOOClient(t, m.URL, nil)
+	got := make(chan string, 10)
+	errs := make(chan error, 10)
+	h, err := c.Logs().Tail(t.Context(), "Tail.S", func(r map[string]any) { got <- r["message"].(string) }, LogTailOptions{
+		Filter: "src = 'x'", Start: base, Interval: 5 * time.Millisecond, Overlap: 2 * time.Second, PageSize: 5,
+		StreamType: StreamTypeLogs, OnError: func(err error) { errs <- err },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []string
+	for len(rows) < 3 {
+		select {
+		case b := <-got:
+			rows = append(rows, b)
+		case <-time.After(5 * time.Second):
+			t.Fatalf("got %v", rows)
+		}
+	}
+	select {
+	case err := <-errs:
+		if !errors.Is(err, ErrValidation) {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("no error reported")
+	}
+	h.Stop()
+	h.Stop()
+	if strings.Join(rows, ",") != "row 0,row 1,row 2" {
+		t.Fatal(rows)
+	}
+	reqs := m.requests()
+	q := jsonBody(t, reqs[0]).(map[string]any)["query"].(map[string]any)
+	want := fmt.Sprintf(`SELECT * FROM "tail_s" WHERE _timestamp >= %d AND (src = 'x') ORDER BY _timestamp ASC`, base.UnixMicro())
+	if q["sql"] != want || q["start_time"].(json.Number).String() != fmt.Sprint(base.UnixMicro()) || q["size"].(json.Number).String() != "5" {
+		t.Fatalf("first poll never reaches before start: %v", q)
+	}
+	if _, err := c.Logs().Tail(t.Context(), " ", func(map[string]any) {}, LogTailOptions{}); !errors.Is(err, ErrValidation) {
+		t.Fatal(err)
+	}
+	if _, err := c.Logs().Tail(t.Context(), "s", nil, LogTailOptions{}); !errors.Is(err, ErrValidation) {
+		t.Fatal(err)
+	}
+	quiet, err := c.Logs().Tail(t.Context(), "s", func(map[string]any) {}, LogTailOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	quiet.Stop()
 }

@@ -220,7 +220,7 @@ func TestTail(t *testing.T) {
 			n := calls
 			mu.Unlock()
 			if n == 1 {
-				rows := make([]string, tailPageSize)
+				rows := make([]string, DefaultTailPageSize)
 				for i := range rows {
 					rows[i] = row(i)
 				}
@@ -230,9 +230,9 @@ func TestTail(t *testing.T) {
 			_, _ = w.Write([]byte(`{"hits":[]}`))
 		})
 		pc := newOOClient(t, pm.URL, nil)
-		count := make(chan struct{}, tailPageSize+1)
+		count := make(chan struct{}, DefaultTailPageSize+1)
 		h, _ := pc.LogQuery("").Tail(t.Context(), "", func(LogRecord) { count <- struct{}{} }, TailOptions{Start: base, Interval: time.Hour})
-		for i := 0; i < tailPageSize; i++ {
+		for i := 0; i < DefaultTailPageSize; i++ {
 			select {
 			case <-count:
 			case <-time.After(5 * time.Second):
@@ -245,7 +245,7 @@ func TestTail(t *testing.T) {
 		}
 		h.Stop()
 		reqs := pm.requests()
-		if len(reqs) < 2 || jsonBody(t, reqs[1]).(map[string]any)["query"].(map[string]any)["from"].(json.Number).String() != fmt.Sprint(tailPageSize) {
+		if len(reqs) < 2 || jsonBody(t, reqs[1]).(map[string]any)["query"].(map[string]any)["from"].(json.Number).String() != fmt.Sprint(DefaultTailPageSize) {
 			t.Fatal("second page not requested")
 		}
 	})

@@ -25,7 +25,7 @@ public final class SqlSearchOptions {
   }
 
   /**
-   * Defaults: last 15 minutes, offset 0, server page size, logs stream.
+   * Defaults: last 15 minutes, offset 0, page size 100, logs stream.
    *
    * @return defaults
    */
@@ -70,7 +70,8 @@ public final class SqlSearchOptions {
   }
 
   /**
-   * Returns the page size (0 = server default; a {@code LIMIT} in the SQL wins).
+   * Returns the page size (default 100; 0 or -1 = the server's default limit; a {@code LIMIT} in
+   * the SQL wins).
    *
    * @return page size
    */
@@ -101,7 +102,7 @@ public final class SqlSearchOptions {
     private Instant start;
     private Instant end;
     private int from;
-    private int size;
+    private int size = 100;
     private boolean trackTotalHits;
     private StreamType streamType;
 
@@ -143,7 +144,7 @@ public final class SqlSearchOptions {
     /**
      * Sets the page size.
      *
-     * @param size page size (0 = server default)
+     * @param size page size (default 100; 0 or -1 = the server's default limit)
      * @return this builder
      */
     public Builder size(int size) {

@@ -17,6 +17,9 @@ import { OpenObserveLogs } from "./logs/logs.js";
 import { OpenObserveLogQuery } from "./logs/query.js";
 import { OpenObserveStreams } from "./logs/streams.js";
 import { OpenObserveTraceQuery } from "./traces/query.js";
+import { initTracing, type OpenObserveTracingConfig } from "./traces/init.js";
+import type { InitTracingOptions, TracingHandle } from "./tracing/index.js";
+import type { LogExporter } from "./logging/index.js";
 
 export type { CallOptions } from "./http.js";
 
@@ -122,14 +125,30 @@ export class OpenObserveClient implements ClientContext {
    */
   logClient(options: OpenObserveLogClientOptions = {}): BatchingLogClient {
     const { stream, protocol, ...batching } = options;
-    const target = stream ?? this.config.stream;
-    const exporter =
-      protocol === "otlp"
-        ? new OpenObserveOtlpLogExporter(this.logs, target)
-        : new OpenObserveLogExporter(this.logs, target);
-    const client = new BatchingLogClient(exporter, batching);
+    const client = new BatchingLogClient(this.logExporter(stream, protocol), batching);
     this.#logClients.add(client);
     return client;
+  }
+
+  /**
+   * The {@link LogExporter} used by {@link logClient}: `json` (`_json` ingestion, default) or
+   * `otlp` (OTLP/JSON to `/v1/logs`) on a stream (default: the config's `stream`).
+   */
+  logExporter(
+    stream: string = this.config.stream,
+    protocol: "json" | "otlp" = "json",
+  ): LogExporter {
+    return protocol === "otlp"
+      ? new OpenObserveOtlpLogExporter(this.logs, stream)
+      : new OpenObserveLogExporter(this.logs, stream);
+  }
+
+  /**
+   * {@link initTracing} with this client's connection settings (URL, org, credentials and
+   * `tracesStream`); `config.openobserve` is ignored. Call `shutdown()` on the handle before exit.
+   */
+  initTracing(config: OpenObserveTracingConfig, options: InitTracingOptions = {}): TracingHandle {
+    return initTracing({ ...config, openobserve: this.config }, options);
   }
 
   /** A {@link LogQueryClient} on a stream (default: the config's `stream`). */

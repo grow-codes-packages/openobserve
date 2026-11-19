@@ -815,8 +815,8 @@ impl OpenObserveLogs {
     }
 
     /// Follows a stream by polling `_search` with a `_timestamp` cursor (OpenObserve has no
-    /// live tail). Every poll re-reads `overlap` before the cursor and drops rows it already
-    /// delivered (by full-row equality), so rows that are exact duplicates within that window
+    /// live tail). Every poll re-reads `overlap` before the cursor (never before `start`) and
+    /// drops rows it already delivered (by full-row equality), so rows that are exact duplicates within that window
     /// are delivered once. Must be called inside a tokio runtime; stop with
     /// [`TailHandle::stop`].
     pub fn tail(
@@ -834,10 +834,13 @@ impl OpenObserveLogs {
         tokio::spawn(async move {
             let overlap = i64::try_from(opts.overlap.as_micros()).unwrap_or(i64::MAX / 4);
             let page_size = opts.page_size.max(1);
-            let mut cursor = opts.start.map_or_else(
+            // Rows before `floor` (the requested start) are never delivered: the overlap
+            // window stops there.
+            let floor = opts.start.map_or_else(
                 || system_time_to_micros(SystemTime::now()),
                 |s| s.as_micros(),
             );
+            let mut cursor = floor;
             let mut seen: HashMap<String, i64> = HashMap::new();
             loop {
                 tokio::select! {
@@ -852,6 +855,7 @@ impl OpenObserveLogs {
                         &h,
                         &mut cursor,
                         &mut seen,
+                        floor,
                         overlap,
                         page_size,
                     )
@@ -878,11 +882,12 @@ impl OpenObserveLogs {
         handle: &TailHandle,
         cursor: &mut i64,
         seen: &mut HashMap<String, i64>,
+        floor: i64,
         overlap: i64,
         page_size: usize,
     ) -> Result<()> {
         loop {
-            let from = *cursor - overlap;
+            let from = (*cursor - overlap).max(floor);
             let filter = opts
                 .filter
                 .as_ref()

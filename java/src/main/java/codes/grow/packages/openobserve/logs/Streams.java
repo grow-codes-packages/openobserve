@@ -169,7 +169,10 @@ public final class Streams {
           Map<String, Object> body = new LinkedHashMap<>();
           update.retentionDays().ifPresent(d -> body.put("data_retention", d));
           CompletableFuture<Map<String, Object>> ready;
-          if (update.partitionKeys().isPresent() || update.fullTextSearchKeys().isPresent()) {
+          if (update.partitionKeys().isPresent()
+              || update.fullTextSearchKeys().isPresent()
+              || update.indexFields().isPresent()
+              || update.bloomFilterFields().isPresent()) {
             ready =
                 getStreamSchemaAsync(name, update.type())
                     .thenApply(
@@ -180,6 +183,15 @@ public final class Streams {
                                   want ->
                                       stringDelta(current.settings().fullTextSearchKeys(), want))
                               .ifPresent(d -> body.put("full_text_search_keys", d));
+                          update
+                              .indexFields()
+                              .map(want -> stringDelta(current.settings().indexFields(), want))
+                              .ifPresent(d -> body.put("index_fields", d));
+                          update
+                              .bloomFilterFields()
+                              .map(
+                                  want -> stringDelta(current.settings().bloomFilterFields(), want))
+                              .ifPresent(d -> body.put("bloom_filter_fields", d));
                           update
                               .partitionKeys()
                               .map(want -> partitionDelta(current.settings().partitionKeys(), want))

@@ -449,16 +449,18 @@ export class OpenObserveLogs {
 
   /**
    * Follows a stream by polling `_search` with a `_timestamp` cursor (OpenObserve has no live
-   * tail). Every poll re-reads `overlapMs` before the cursor and drops rows it already delivered
-   * (by full-row equality), so rows that are exact duplicates within that window are delivered
-   * once.
+   * tail). Every poll re-reads `overlapMs` before the cursor (never before `start`) and drops rows
+   * it already delivered (by full-row equality), so rows that are exact duplicates within that
+   * window are delivered once.
    */
   tail(stream: string, onRow: (row: JsonObject) => void, opts: LogTailOptions = {}): TailHandle {
     const name = streamName(stream, "", "logs.tail");
     const intervalMs = opts.intervalMs ?? 1000;
     const overlap = Math.max(0, opts.overlapMs ?? 1000) * 1000;
     const pageSize = Math.max(1, opts.pageSize ?? 1000);
-    let cursor = opts.start === undefined ? Date.now() * 1000 : toMicros(opts.start, "logs.tail");
+    // Rows before `floor` (the requested start) are never delivered: the overlap window stops there.
+    const floor = opts.start === undefined ? Date.now() * 1000 : toMicros(opts.start, "logs.tail");
+    let cursor = floor;
     const seen = new Map<string, number>();
     const controller = new AbortController();
     let stopped = false;
@@ -466,7 +468,7 @@ export class OpenObserveLogs {
 
     const poll = async (): Promise<void> => {
       for (;;) {
-        const from = cursor - overlap;
+        const from = Math.max(floor, cursor - overlap);
         const where = opts.filter === undefined ? "" : ` AND (${opts.filter})`;
         const sql = `SELECT * FROM ${sqlIdent(name)} WHERE _timestamp >= ${from}${where} ORDER BY _timestamp ASC`;
         const page = await this.search(sql, {

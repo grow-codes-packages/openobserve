@@ -14,6 +14,8 @@ public final class StreamSettingsUpdate {
   private final Integer retentionDays;
   private final List<PartitionKey> partitionKeys;
   private final List<String> fullTextSearchKeys;
+  private final List<String> indexFields;
+  private final List<String> bloomFilterFields;
 
   private StreamSettingsUpdate(Builder b) {
     this.type = StreamType.orLogs(b.type);
@@ -21,6 +23,8 @@ public final class StreamSettingsUpdate {
     this.partitionKeys = b.partitionKeys == null ? null : List.copyOf(b.partitionKeys);
     this.fullTextSearchKeys =
         b.fullTextSearchKeys == null ? null : List.copyOf(b.fullTextSearchKeys);
+    this.indexFields = b.indexFields == null ? null : List.copyOf(b.indexFields);
+    this.bloomFilterFields = b.bloomFilterFields == null ? null : List.copyOf(b.bloomFilterFields);
   }
 
   /**
@@ -68,12 +72,32 @@ public final class StreamSettingsUpdate {
     return Optional.ofNullable(fullTextSearchKeys);
   }
 
+  /**
+   * Returns the wanted secondary index fields.
+   *
+   * @return fields, or empty to keep them
+   */
+  public Optional<List<String>> indexFields() {
+    return Optional.ofNullable(indexFields);
+  }
+
+  /**
+   * Returns the wanted bloom filter fields.
+   *
+   * @return fields, or empty to keep them
+   */
+  public Optional<List<String>> bloomFilterFields() {
+    return Optional.ofNullable(bloomFilterFields);
+  }
+
   /** Builder of {@link StreamSettingsUpdate}. */
   public static final class Builder {
     private StreamType type;
     private Integer retentionDays;
     private List<PartitionKey> partitionKeys;
     private List<String> fullTextSearchKeys;
+    private List<String> indexFields;
+    private List<String> bloomFilterFields;
 
     private Builder() {}
 
@@ -118,6 +142,28 @@ public final class StreamSettingsUpdate {
      */
     public Builder fullTextSearchKeys(List<String> keys) {
       this.fullTextSearchKeys = keys;
+      return this;
+    }
+
+    /**
+     * Replaces the secondary index fields.
+     *
+     * @param fields fields
+     * @return this builder
+     */
+    public Builder indexFields(List<String> fields) {
+      this.indexFields = fields;
+      return this;
+    }
+
+    /**
+     * Replaces the bloom filter fields.
+     *
+     * @param fields fields
+     * @return this builder
+     */
+    public Builder bloomFilterFields(List<String> fields) {
+      this.bloomFilterFields = fields;
       return this;
     }
 

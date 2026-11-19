@@ -13,11 +13,9 @@ import codes.grow.packages.openobserve.logging.SortOrder;
 import codes.grow.packages.openobserve.logging.TailHandle;
 import codes.grow.packages.openobserve.logging.TailOptions;
 import com.fasterxml.jackson.databind.JsonNode;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -26,10 +24,6 @@ import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -45,11 +39,14 @@ import java.util.regex.Pattern;
  * becomes an attribute.
  */
 public final class OpenObserveLogQuery implements LogQueryClient {
-  /** How far each tail poll reaches back before the cursor (rows are de-duplicated by content). */
-  public static final Duration TAIL_OVERLAP = Duration.ofSeconds(1);
+  /**
+   * How far each tail poll reaches back before the cursor, never before the start (rows are
+   * de-duplicated by content).
+   */
+  public static final Duration TAIL_OVERLAP = RowTailer.OVERLAP;
 
   /** Page size of one tail poll. */
-  static final int TAIL_PAGE_SIZE = 500;
+  static final int TAIL_PAGE_SIZE = RowTailer.PAGE_SIZE;
 
   private static final Pattern TRACE_ID = Pattern.compile("[0-9a-f]{32}");
   private static final Pattern SPAN_ID = Pattern.compile("[0-9a-f]{16}");
@@ -220,110 +217,22 @@ public final class OpenObserveLogQuery implements LogQueryClient {
     TailOptions o = options == null ? TailOptions.defaults() : options;
     Duration interval =
         o.interval().isNegative() || o.interval().isZero() ? Duration.ofSeconds(1) : o.interval();
-    long floor = Values.micros(o.start().orElseGet(Instant::now));
-    Tailer t = new Tailer(buildSql(query, SortOrder.ASC), onRecord, o.onError(), floor);
-    ScheduledExecutorService exec =
-        Executors.newSingleThreadScheduledExecutor(
-            r -> {
-              Thread th = new Thread(r, "openobserve-tail");
-              th.setDaemon(true);
-              return th;
-            });
-    exec.scheduleWithFixedDelay(t::poll, 0, interval.toMillis(), TimeUnit.MILLISECONDS);
-    AtomicBoolean stopped = new AtomicBoolean();
-    return () -> {
-      if (stopped.compareAndSet(false, true)) {
-        t.stopped = true;
-        exec.shutdownNow();
-        try {
-          exec.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-        }
-      }
-    };
-  }
-
-  /** Poll state of one tail subscription (used from a single thread). */
-  final class Tailer {
-    private final String sql;
-    private final Consumer<LogRecord> onRecord;
-    private final Consumer<Throwable> onError;
-    private final long floor;
-    private final Map<String, Long> seen = new HashMap<>();
-    private long cursor;
-    volatile boolean stopped;
-
-    Tailer(String sql, Consumer<LogRecord> onRecord, Consumer<Throwable> onError, long floor) {
-      this.sql = sql;
-      this.onRecord = onRecord;
-      this.onError = onError;
-      this.floor = floor;
-      this.cursor = floor;
-    }
-
-    void poll() {
-      long overlap = TAIL_OVERLAP.toNanos() / 1000;
-      long start = cursor - overlap;
-      long end = Values.micros(Instant.now().plusSeconds(1));
-      try {
-        for (int from = 0; !stopped; from += TAIL_PAGE_SIZE) {
-          JsonNode body =
-              Api.await(
-                  api.searchAsync(
-                      "logs.tail",
-                      sql,
-                      start,
-                      end,
-                      from,
-                      TAIL_PAGE_SIZE,
-                      false,
-                      StreamType.LOGS.wireValue()),
-                  "logs.tail");
-          int n = 0;
-          for (JsonNode h : body.path("hits")) {
-            n++;
-            deliver(Values.row(h));
-          }
-          if (n < TAIL_PAGE_SIZE) {
-            break;
-          }
-        }
-      } catch (RuntimeException e) {
-        if (!stopped) {
-          safe(() -> onError.accept(e));
-        }
-      }
-      long limit = cursor - overlap;
-      seen.values().removeIf(ts -> ts < limit);
-    }
-
-    void deliver(Map<String, Object> row) {
-      long ts = row.get("_timestamp") instanceof Long ? (Long) row.get("_timestamp") : 0L;
-      if (ts < floor) {
-        return;
-      }
-      String key = hash(row);
-      if (seen.putIfAbsent(key, ts) != null) {
-        return;
-      }
-      cursor = Math.max(cursor, ts);
-      LogRecord r = recordFromRow(row);
-      safe(() -> onRecord.accept(r));
-    }
-  }
-
-  private static void safe(Runnable r) {
-    try {
-      r.run();
-    } catch (RuntimeException ignored) {
-      // a failing callback must not stop the tail
-    }
+    String sql = buildSql(query, SortOrder.ASC);
+    return new RowTailer(
+            api,
+            from -> sql,
+            StreamType.LOGS,
+            TAIL_PAGE_SIZE,
+            TAIL_OVERLAP,
+            o.start().orElseGet(Instant::now),
+            row -> onRecord.accept(recordFromRow(row)),
+            o.onError())
+        .start(interval);
   }
 
   /** Content key of a row (JSON with sorted keys), so equal rows give equal keys. */
   static String hash(Map<String, Object> row) {
-    return new String(Json.encode(new TreeMap<>(row)), StandardCharsets.UTF_8);
+    return RowTailer.hash(row);
   }
 
   /**

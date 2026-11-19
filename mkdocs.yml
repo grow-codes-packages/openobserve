@@ -117,7 +117,15 @@ nav:
   - Quickstart: quickstart.md
   - Configuration: configuration.md
   - Client: client.md
-  - Functions: functions.md
+  - Functions:
+      - functions.md
+      - Client and status: functions/client.md
+      - Ingest: functions/ingest.md
+      - Search and tail: functions/search.md
+      - Streams: functions/streams.md
+      - Traces: functions/traces.md
+      - Log client and search: functions/logging.md
+      - Admin: functions/admin.md
   - Logging: logging.md
   - Tracing: tracing.md
   - Error handling: errors.md

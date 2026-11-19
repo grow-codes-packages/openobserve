@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 
 import grow_openobserve as sdk
-from _support import MockServer, Reply, closed_port_url, make_config
+from _support import MockServer, Reply, closed_port_url, make_config, spawn_capturing
 
 PASSWORD = "client-pass-789"
 USER = "root@example.com"
@@ -184,11 +184,13 @@ async def test_async_health_unreachable() -> None:
 async def test_async_health_cancel(server: MockServer) -> None:
     server.enqueue("/healthz", Reply(200, delay=2.0))
     c = aclient(server.url)
-    task = asyncio.ensure_future(c.health())
+    errors: list[BaseException] = []
+    task = spawn_capturing(c.health(), errors)
     await asyncio.sleep(0.1)
     task.cancel()
-    with pytest.raises(sdk.CancelledError):
+    with pytest.raises(asyncio.CancelledError):
         await task
+    assert isinstance(errors[0], sdk.CancelledError)
     await c.aclose()
 
 

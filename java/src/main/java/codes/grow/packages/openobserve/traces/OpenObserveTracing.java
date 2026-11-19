@@ -42,16 +42,18 @@ public final class OpenObserveTracing {
    * @param config client configuration
    * @param tc tracing configuration
    * @return the completed tracing configuration
-   * @throws ConfigException for the {@code native} protocol
+   * @throws ConfigException for an invalid client configuration; {@code native} becomes OTLP/HTTP
+   *     protobuf
    */
   public static TracingConfig configure(OpenObserveConfig config, TracingConfig tc) {
     config.validate();
-    if (tc.protocol() == TracingConfig.Protocol.NATIVE) {
-      throw new ConfigException(
-          "tracing: OpenObserve takes OTLP (http/protobuf or grpc), not a native protocol");
-    }
     boolean grpc = tc.protocol() == TracingConfig.Protocol.GRPC;
     TracingConfig.Builder b = tc.toBuilder();
+    if (tc.protocol() == TracingConfig.Protocol.NATIVE) {
+      // OpenObserve's own ingestion format is OTLP over HTTP; the official Java exporter encodes
+      // it as protobuf (OTLP/JSON is TypeScript/Rust only).
+      b.protocol(TracingConfig.Protocol.HTTP_PROTOBUF);
+    }
     if (tc.endpoint().isEmpty()) {
       if (grpc) {
         URI base = URI.create(config.url());

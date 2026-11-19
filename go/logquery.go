@@ -117,30 +117,63 @@ func (q *LogQuery) WaitForLog(ctx context.Context, query string, opts WaitForLog
 	return WaitForLog(ctx, q, query, opts)
 }
 
-// TailOverlap is how far each tail poll reaches back before the cursor; rows in
-// the overlap are de-duplicated by content.
+// TailOverlap is the default distance each tail poll reaches back before the
+// cursor (never before the start); rows in the overlap are de-duplicated by
+// content.
 const TailOverlap = time.Second
 
 // Tail polls the stream for new matching records and calls onRecord for each
 // one, oldest first, until the handle is stopped or ctx is done. OpenObserve has
-// no live tail and no row id: each poll re-reads the last TailOverlap and drops
-// rows already seen (exact duplicates within the same microsecond are therefore
-// delivered once). Search errors are logged and polling continues.
+// no live tail and no row id: each poll re-reads the last TailOverlap (never
+// before opts.Start) and drops rows already seen (exact duplicates within the
+// same microsecond are therefore delivered once). Search errors are logged at
+// debug level and polling continues. Use Logs.Tail for raw rows, a SQL filter
+// and an error callback.
 func (q *LogQuery) Tail(ctx context.Context, query string, onRecord func(LogRecord), opts TailOptions) (TailHandle, error) {
 	if onRecord == nil {
 		return nil, ValidationError("logs.tail", "onRecord is required")
 	}
-	interval := opts.Interval
+	sql := q.buildSQL(query, OrderAsc)
+	return q.c.startTail(ctx, &rowTailer{
+		sqlFor: func(int64) string { return sql },
+		onRow:  func(row map[string]AttrValue) { onRecord(recordFromRow(row)) },
+	}, opts.Start, opts.Interval), nil
+}
+
+// DefaultTailPageSize is the default page size of one tail poll.
+const DefaultTailPageSize = 1000
+
+// rowTailer is the poll state of one tail subscription (used from one goroutine).
+type rowTailer struct {
+	c        *Client
+	sqlFor   func(from int64) string
+	typ      StreamType
+	pageSize int
+	overlap  int64 // µs
+	onRow    func(map[string]AttrValue)
+	onError  func(error)
+	cursor   int64 // newest delivered _timestamp (µs)
+	floor    int64 // records before floor are never delivered or queried
+	seen     map[[32]byte]int64
+}
+
+// startTail fills the defaults of t and polls every interval in a goroutine.
+func (c *Client) startTail(ctx context.Context, t *rowTailer, start time.Time, interval time.Duration) TailHandle {
 	if interval <= 0 {
 		interval = time.Second
 	}
-	floor := opts.Start
-	if floor.IsZero() {
-		floor = time.Now()
+	if start.IsZero() {
+		start = time.Now()
 	}
+	if t.pageSize <= 0 {
+		t.pageSize = DefaultTailPageSize
+	}
+	if t.overlap <= 0 {
+		t.overlap = TailOverlap.Microseconds()
+	}
+	t.c, t.floor, t.cursor, t.seen = c, start.UnixMicro(), start.UnixMicro(), map[[32]byte]int64{}
 	tctx, cancel := context.WithCancel(ctx)
 	h := &tailHandle{cancel: cancel, done: make(chan struct{})}
-	t := &tailer{q: q, sql: q.buildSQL(query, OrderAsc), onRecord: onRecord, cursor: floor.UnixMicro(), floor: floor.UnixMicro(), seen: map[[32]byte]int64{}}
 	go func() {
 		defer close(h.done)
 		defer cancel()
@@ -151,40 +184,37 @@ func (q *LogQuery) Tail(ctx context.Context, query string, onRecord func(LogReco
 			}
 		}
 	}()
-	return h, nil
+	return h
 }
 
-// tailPageSize is the page size of one tail poll.
-const tailPageSize = 500
-
-type tailer struct {
-	q        *LogQuery
-	sql      string
-	onRecord func(LogRecord)
-	cursor   int64 // newest delivered _timestamp (µs)
-	floor    int64 // records before floor are never delivered
-	seen     map[[32]byte]int64
-}
-
-func (t *tailer) poll(ctx context.Context) {
-	start := fromMicros(t.cursor - TailOverlap.Microseconds())
+func (t *rowTailer) poll(ctx context.Context) {
+	from := max(t.floor, t.cursor-t.overlap)
+	sql := t.sqlFor(from)
 	end := time.Now().Add(time.Second)
-	for from := 0; ctx.Err() == nil; from += tailPageSize {
-		w, err := t.q.c.searchRaw(ctx, "logs.tail", t.sql, start, end, from, tailPageSize, false, StreamTypeLogs)
+	for offset := 0; ctx.Err() == nil; offset += t.pageSize {
+		w, err := t.c.searchRaw(ctx, "logs.tail", sql, fromMicros(from), end, offset, t.pageSize, false, t.typ)
 		if err != nil {
-			if ctx.Err() == nil {
-				t.q.c.transport.log(slog.LevelDebug, "tail poll failed", slog.String("error", err.Error()))
+			if ctx.Err() != nil {
+				return
+			}
+			if t.onError != nil {
+				safeCall(func() { t.onError(err) })
+			} else {
+				t.c.transport.log(slog.LevelDebug, "tail poll failed", slog.String("error", err.Error()))
 			}
 			return
 		}
 		for _, raw := range w.Hits {
+			if ctx.Err() != nil {
+				return
+			}
 			t.deliver(NormalizeAttributes(raw))
 		}
-		if len(w.Hits) < tailPageSize {
+		if len(w.Hits) < t.pageSize {
 			break
 		}
 	}
-	limit := t.cursor - TailOverlap.Microseconds()
+	limit := t.cursor - t.overlap
 	for k, ts := range t.seen {
 		if ts < limit {
 			delete(t.seen, k)
@@ -192,7 +222,7 @@ func (t *tailer) poll(ctx context.Context) {
 	}
 }
 
-func (t *tailer) deliver(row map[string]AttrValue) {
+func (t *rowTailer) deliver(row map[string]AttrValue) {
 	ts, _ := toInt64(row["_timestamp"])
 	if ts < t.floor {
 		return
@@ -206,7 +236,7 @@ func (t *tailer) deliver(row map[string]AttrValue) {
 	if ts > t.cursor {
 		t.cursor = ts
 	}
-	safeCall(func() { t.onRecord(recordFromRow(row)) })
+	safeCall(func() { t.onRow(row) })
 }
 
 type tailHandle struct {

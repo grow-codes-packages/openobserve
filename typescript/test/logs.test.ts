@@ -508,9 +508,10 @@ describe("logs.tail", () => {
     expect(seen).toEqual(["a", "b", "c"]);
     const first = body(s).query;
     expect(first.sql).toBe(
-      "SELECT * FROM \"tail_s\" WHERE _timestamp >= 0 AND (match_all('x')) ORDER BY _timestamp ASC",
+      "SELECT * FROM \"tail_s\" WHERE _timestamp >= 1000000 AND (match_all('x')) ORDER BY _timestamp ASC",
     );
-    expect(first.start_time).toBe(0);
+    // The overlap never reaches back before `start` (and never sends start_time=0).
+    expect(first.start_time).toBe(1_000_000);
     expect(body(s, 1).query.sql).toContain("_timestamp >= 2000000");
   });
 

@@ -1,10 +1,8 @@
 package codes.grow.packages.openobserve.traces;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import codes.grow.packages.openobserve.OpenObserveConfig;
-import codes.grow.packages.openobserve.core.ConfigException;
 import codes.grow.packages.openobserve.core.TlsOptions;
 import codes.grow.packages.openobserve.tracing.TracingConfig;
 import io.opentelemetry.sdk.trace.export.SpanExporter;
@@ -54,13 +52,12 @@ class OpenObserveTracingTest {
   }
 
   @Test
-  void nativeProtocolIsRejected() {
-    assertThatThrownBy(
-            () ->
-                OpenObserveTracing.configure(
-                    cfg(),
-                    TracingConfig.builder("svc").protocol(TracingConfig.Protocol.NATIVE).build()))
-        .isInstanceOf(ConfigException.class);
+  void nativeProtocolBecomesOtlpHttpProtobuf() {
+    TracingConfig tc =
+        OpenObserveTracing.configure(
+            cfg(), TracingConfig.builder("svc").protocol(TracingConfig.Protocol.NATIVE).build());
+    assertThat(tc.protocol()).isEqualTo(TracingConfig.Protocol.HTTP_PROTOBUF);
+    assertThat(tc.endpoint()).hasValueSatisfying(e -> assertThat(e).endsWith("/v1/traces"));
   }
 
   @Test

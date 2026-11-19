@@ -39,8 +39,10 @@ import codes.grow.packages.openobserve.logs.FieldValues;
 import codes.grow.packages.openobserve.logs.HistogramOptions;
 import codes.grow.packages.openobserve.logs.HistogramResult;
 import codes.grow.packages.openobserve.logs.IngestResult;
+import codes.grow.packages.openobserve.logs.LogTailOptions;
 import codes.grow.packages.openobserve.logs.Logs;
 import codes.grow.packages.openobserve.logs.OpenObserveLogQuery;
+import codes.grow.packages.openobserve.logs.OtlpIngestResult;
 import codes.grow.packages.openobserve.logs.PartitionKey;
 import codes.grow.packages.openobserve.logs.SchemaField;
 import codes.grow.packages.openobserve.logs.SqlSearchOptions;
@@ -390,6 +392,60 @@ class OpenObserveIntegrationTest {
     assertEquals("sdk-java-otlp", viaOtlp.resource().get("service.name"));
     otlp.close();
     lc.close();
+
+    // logs().ingestOtlp writes SDK records directly
+    OtlpIngestResult ingested =
+        client
+            .logs()
+            .ingestOtlp(
+                List.of(
+                    LogRecord.builder()
+                        .timestamp(Instant.now())
+                        .severity(Severity.INFO)
+                        .body("ingest otlp " + run)
+                        .resource(Map.of("service.name", "sdk-java-ingest"))
+                        .build()),
+                otlpStream,
+                true);
+    assertEquals(new OtlpIngestResult(1, 0), ingested);
+    LogRecord viaIngest =
+        client
+            .logQuery(otlpStream)
+            .waitForLog("ingest otlp " + run, WaitForLogOptions.of(WAIT, Duration.ofMillis(250)));
+    assertEquals("sdk-java-ingest", viaIngest.resource().get("service.name"));
+  }
+
+  @Test
+  void logsTailRawRows() throws Exception {
+    String stream = "sdk_java_rawtail_" + run;
+    List<String> rows = new CopyOnWriteArrayList<>();
+    TailHandle tail =
+        client
+            .logs()
+            .tail(
+                stream,
+                row -> rows.add(String.valueOf(row.get("message"))),
+                LogTailOptions.builder()
+                    .filter("src = 'rawtail'")
+                    .interval(Duration.ofMillis(200))
+                    .build());
+    Thread.sleep(300);
+    client
+        .logs()
+        .ingestJson(
+            stream,
+            List.of(
+                Map.of("message", "raw 1", "src", "rawtail"),
+                Map.of("message", "raw 2", "src", "rawtail"),
+                Map.of("message", "other", "src", "x")));
+    long deadline = System.nanoTime() + WAIT.toNanos();
+    while (rows.size() < 2 && System.nanoTime() < deadline) {
+      Thread.sleep(100);
+    }
+    Thread.sleep(600); // more polls: the overlap must not re-deliver
+    tail.stop();
+    assertEquals(List.of("raw 1", "raw 2"), rows.stream().sorted().toList());
+    client.streams().deleteStream(stream, StreamType.LOGS);
   }
 
   @Test
@@ -452,6 +508,25 @@ class OpenObserveIntegrationTest {
     assertTrue(range.found());
     assertFalse(traces.traceTimeRange("ffffffffffffffffffffffffffffffff").found());
     handle.shutdown();
+
+    // native maps to OTLP/HTTP protobuf in Java; client.traces() is the configured traces stream
+    TracingHandle nativeHandle =
+        client.initTracing(
+            TracingConfig.builder(service + "-native")
+                .protocol(TracingConfig.Protocol.NATIVE)
+                .setGlobal(false)
+                .build());
+    io.opentelemetry.api.trace.Span ns = nativeHandle.tracer("it").spanBuilder("native-op").startSpan();
+    ns.end();
+    nativeHandle.forceFlush(Duration.ofSeconds(10));
+    nativeHandle.shutdown();
+    Trace nt =
+        client
+            .traces()
+            .waitForTrace(
+                ns.getSpanContext().getTraceId(),
+                new WaitForTraceOptions(WAIT, Duration.ofMillis(250), 1));
+    assertEquals(service + "-native", nt.spans().get(0).serviceName());
   }
 
   @Test

@@ -188,6 +188,7 @@ class OpenObserveClientTest {
       assertThat(c.logQuery("My-Stream").stream()).isEqualTo("my_stream");
       assertThat(c.logQuery(null).stream()).isEqualTo("default");
       assertThat(c.traceQuery().stream()).isEqualTo("default");
+      assertThat(c.traces().stream()).isEqualTo("default");
       assertThat(c.traceQuery("T.x").stream()).isEqualTo("t_x");
       assertThat(c.traceQuery(null).stream()).isEqualTo("default");
       assertThat(c.logExporter(null, false)).isInstanceOf(JsonLogExporter.class);

@@ -108,12 +108,11 @@ test("getDependencies is unsupported in OSS; client.traces uses the configured t
   assert.equal(client.traces.stream, process.env.OPENOBSERVE_TRACES_STREAM);
 });
 
-test("native protocol (OTLP/JSON) exports too", async () => {
-  const h = initTracing({
+test("client.initTracing with the native protocol (OTLP/JSON) exports too", async () => {
+  const h = client.initTracing({
     serviceName: `${service}-json`,
     protocol: "native",
     setGlobal: false,
-    openobserve: client.config,
     stream,
   });
   const span = h.tracer("it").startSpan("json-op");

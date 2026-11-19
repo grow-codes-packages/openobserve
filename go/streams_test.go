@@ -55,6 +55,7 @@ func TestStreams(t *testing.T) {
 		days := 7
 		err := s.UpdateStreamSettings(t.Context(), fxStream, StreamSettingsUpdate{
 			RetentionDays: &days, FullTextSearchKeys: []string{"message", "message"}, PartitionKeys: []PartitionKey{{Field: "run_id"}},
+			IndexFields: []string{"level"}, BloomFilterFields: []string{"trace_id"},
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -65,7 +66,7 @@ func TestStreams(t *testing.T) {
 		}
 		body := jsonBody(t, r).(map[string]any)
 		raw, _ := json.Marshal(body)
-		want := `{"data_retention":7,"full_text_search_keys":{"add":["message"],"remove":[]},"partition_keys":{"add":[{"field":"run_id","types":"value"}],"remove":[]}}`
+		want := `{"bloom_filter_fields":{"add":["trace_id"],"remove":[]},"data_retention":7,"full_text_search_keys":{"add":["message"],"remove":[]},"index_fields":{"add":["level"],"remove":[]},"partition_keys":{"add":[{"field":"run_id","types":"value"}],"remove":[]}}`
 		if string(raw) != want {
 			t.Fatalf("body %s", raw)
 		}

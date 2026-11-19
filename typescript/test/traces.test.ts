@@ -340,6 +340,32 @@ describe("initTracing", () => {
     expect(handle.config.toString()).not.toContain(creds.password);
   });
 
+  it("client.initTracing uses the client's connection and client.logExporter picks the protocol", async () => {
+    const s = await startServer(() => ({
+      status: 200,
+      headers: { "content-type": "application/x-protobuf" },
+      body: "",
+    }));
+    servers.push(s);
+    const client = new OpenObserveClient({ url: s.url, ...creds, tracesStream: "Client.Tr" });
+    clients.push(client);
+    const handle = client.initTracing({
+      serviceName: "svc-client",
+      setGlobal: false,
+      compression: "none",
+      openobserve: { url: "http://ignored.invalid" },
+    });
+    handle.tracer("t").startSpan("op").end();
+    await handle.forceFlush(5000);
+    await handle.shutdown();
+    const req = s.requests[0]!;
+    expect(req.url).toBe("/api/default/v1/traces");
+    expect(req.headers["stream-name"]).toBe("client_tr");
+    expect(req.headers.authorization).toMatch(/^Basic /);
+    expect(client.logExporter().constructor.name).toBe("OpenObserveLogExporter");
+    expect(client.logExporter("x", "otlp").constructor.name).toBe("OpenObserveOtlpLogExporter");
+  });
+
   it("native protocol sends OTLP/JSON (gzip) and env config is the default", async () => {
     const s = await startServer(() => ({ status: 200, body: {} }));
     servers.push(s);

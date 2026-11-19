@@ -178,6 +178,15 @@ public final class OpenObserveClient implements AutoCloseable {
   }
 
   /**
+   * Returns the trace query module on the configured traces stream (same as {@link #traceQuery()}).
+   *
+   * @return the query client
+   */
+  public OpenObserveTraceQuery traces() {
+    return traceQuery();
+  }
+
+  /**
    * Returns the {@code TraceQueryClient} for the configured traces stream.
    *
    * @return the query client

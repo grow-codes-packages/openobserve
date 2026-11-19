@@ -28,8 +28,8 @@ Trademarks
 -------------------------------------------------------------------------------
 
 This project is an independent, community-maintained client library. It is not
-affiliated with, endorsed or sponsored by ZincLabs, Inc..
-OpenObserve is a trademark of ZincLabs, Inc.. All other product names, logos and
+affiliated with, endorsed or sponsored by ZincLabs, Inc.
+OpenObserve is a trademark of ZincLabs, Inc. All other product names, logos and
 brands are the property of their respective owners and are used for
 identification purposes only.
 
@@ -59,3 +59,25 @@ copyright and licence.
 
   CODE_OF_CONDUCT.md is adapted from the Contributor Covenant, version 2.1,
   https://www.contributor-covenant.org, licensed under CC BY 4.0.
+
+  OTLP messages (all five packages). The OTLP/HTTP JSON log requests
+  (ExportLogsServiceRequest) are built from the field names of the OpenTelemetry
+  protocol specification and opentelemetry-proto (Copyright The OpenTelemetry
+  Authors, Apache-2.0). The Python package decodes the message field of
+  google.rpc.Status error bodies using the field numbers of the Google APIs
+  common protos (Copyright Google LLC, Apache-2.0). No code was copied from
+  these projects and no OpenObserve code or module is used; the request and
+  response shapes of the OpenObserve HTTP API were taken from its public
+  documentation and observed responses of the v1.1.2 container.
+
+  Spans are exported with the official OpenTelemetry SDKs and OTLP exporters
+  of each language (Apache-2.0): @opentelemetry/exporter-trace-otlp-proto,
+  -otlp-http and -otlp-grpc with @grpc/grpc-js (Apache-2.0) for TypeScript;
+  opentelemetry-otlp for Rust; go.opentelemetry.io/otel/exporters/otlp for Go;
+  opentelemetry-exporter-otlp-proto-http (and the optional -proto-grpc) for
+  Python; io.opentelemetry:opentelemetry-exporter-otlp for Java.
+
+  Notable other runtime dependencies of the service code: undici (MIT) for
+  TypeScript; reqwest (MIT OR Apache-2.0), base64 and percent-encoding (MIT OR
+  Apache-2.0) for Rust; httpx (BSD-3-Clause) for Python; jackson-databind
+  (Apache-2.0) for Java. Go uses the standard library plus OpenTelemetry.

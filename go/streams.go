@@ -242,6 +242,10 @@ type StreamSettingsUpdate struct {
 	PartitionKeys []PartitionKey
 	// FullTextSearchKeys replaces the full-text search keys.
 	FullTextSearchKeys []string
+	// IndexFields replaces the secondary index fields.
+	IndexFields []string
+	// BloomFilterFields replaces the bloom filter fields.
+	BloomFilterFields []string
 }
 
 // UpdateStreamSettings applies upd (PUT /api/{org}/streams/{stream}/settings).
@@ -258,15 +262,25 @@ func (s *Streams) UpdateStreamSettings(ctx context.Context, stream string, upd S
 	if upd.RetentionDays != nil {
 		body["data_retention"] = *upd.RetentionDays
 	}
-	if upd.PartitionKeys != nil || upd.FullTextSearchKeys != nil {
+	if upd.PartitionKeys != nil || upd.FullTextSearchKeys != nil || upd.IndexFields != nil || upd.BloomFilterFields != nil {
 		current, err := s.GetStreamSchema(ctx, name, upd.Type)
 		if err != nil {
 			return err
 		}
-		if upd.FullTextSearchKeys != nil {
-			add, remove := stringDelta(current.Settings.FullTextSearchKeys, upd.FullTextSearchKeys)
-			if len(add)+len(remove) > 0 {
-				body["full_text_search_keys"] = map[string]any{"add": add, "remove": remove}
+		lists := []struct {
+			key           string
+			current, want []string
+		}{
+			{"full_text_search_keys", current.Settings.FullTextSearchKeys, upd.FullTextSearchKeys},
+			{"index_fields", current.Settings.IndexFields, upd.IndexFields},
+			{"bloom_filter_fields", current.Settings.BloomFilterFields, upd.BloomFilterFields},
+		}
+		for _, l := range lists {
+			if l.want == nil {
+				continue
+			}
+			if add, remove := stringDelta(l.current, l.want); len(add)+len(remove) > 0 {
+				body[l.key] = map[string]any{"add": add, "remove": remove}
 			}
 		}
 		if upd.PartitionKeys != nil {

@@ -1,12 +1,15 @@
 # Quickstart
 
 Connect to OpenObserve, check that it is healthy, make an authenticated call and close the client.
-The client reads `GROW_OPENOBSERVE_URL` and `GROW_OPENOBSERVE_TOKEN` (and the vendor variables
-listed in [Configuration](configuration.md)), or takes the values in code.
+The client reads `OPENOBSERVE_*` / `GROW_OPENOBSERVE_*` variables (see
+[Configuration](configuration.md)) or takes the values in code. OpenObserve uses HTTP Basic auth:
+a user e-mail plus its password, or a service-account e-mail plus its token.
 
 ```sh
-export GROW_OPENOBSERVE_URL=http://127.0.0.1:5080
-export GROW_OPENOBSERVE_TOKEN=...   # never commit real tokens
+export OPENOBSERVE_URL=http://127.0.0.1:5080
+export OPENOBSERVE_ORG=default
+export OPENOBSERVE_USER=root@example.com
+export OPENOBSERVE_PASSWORD=...     # or OPENOBSERVE_TOKEN=<service-account token>; never commit real secrets
 ```
 
 === "TypeScript"
@@ -125,6 +128,13 @@ export GROW_OPENOBSERVE_TOKEN=...   # never commit real tokens
       }
     }
     ```
+
+## Write and read logs, send a trace
+
+The [Functions](functions.md) pages show every call; the README quickstart writes two records,
+reads them back with SQL and sends a trace in each language. The runnable programs in
+[`examples/`](https://github.com/grow-codes-packages/openobserve/tree/main/examples) do the same
+end to end.
 
 ## Next steps
 

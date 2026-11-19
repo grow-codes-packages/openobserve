@@ -6,7 +6,10 @@ import codes.grow.packages.openobserve.core.TransportResponse;
 import codes.grow.packages.openobserve.core.ValidationException;
 import codes.grow.packages.openobserve.internal.Api;
 import codes.grow.packages.openobserve.internal.Values;
+import codes.grow.packages.openobserve.logging.ExportOptions;
+import codes.grow.packages.openobserve.logging.LogRecord;
 import codes.grow.packages.openobserve.logging.LogRecordJson;
+import codes.grow.packages.openobserve.logging.TailHandle;
 import com.fasterxml.jackson.databind.JsonNode;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -22,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 /**
  * Log ingestion and SQL search of OpenObserve ({@code OpenObserveClient.logs()}).
@@ -215,6 +219,54 @@ public final class Logs {
     return new BulkResult(body.path("took").asLong(0), body.path("errors").asBoolean(false), items);
   }
 
+  /**
+   * Writes SDK log records as OTLP/HTTP JSON to the configured stream ({@code POST
+   * /api/{org}/v1/logs}, header {@code stream-name}).
+   *
+   * @param records records (an empty list sends nothing)
+   * @return accepted and rejected counts
+   */
+  public OtlpIngestResult ingestOtlp(List<LogRecord> records) {
+    return ingestOtlp(records, null, false);
+  }
+
+  /**
+   * Writes SDK log records as OTLP/HTTP JSON ({@code POST /api/{org}/v1/logs}, header {@code
+   * stream-name}). The server stores {@code body}, {@code severity}, {@code severity_number},
+   * {@code trace_id}, {@code span_id} and the flattened attributes; trace flags are not stored.
+   *
+   * @param records records (an empty list sends nothing)
+   * @param stream target stream, or null for the configured stream
+   * @param gzip compress the body
+   * @return accepted and rejected counts
+   */
+  public OtlpIngestResult ingestOtlp(List<LogRecord> records, String stream, boolean gzip) {
+    return Api.await(ingestOtlpAsync(records, stream, gzip), "logs.ingestOtlp");
+  }
+
+  /**
+   * Asynchronous {@link #ingestOtlp(List, String, boolean)}.
+   *
+   * @param records records
+   * @param stream target stream, or null for the configured stream
+   * @param gzip compress the body
+   * @return future counts
+   */
+  public CompletableFuture<OtlpIngestResult> ingestOtlpAsync(
+      List<LogRecord> records, String stream, boolean gzip) {
+    return Api.defer(
+        () -> {
+          OtlpLogExporter exporter =
+              new OtlpLogExporter(api, stream == null ? api.config().stream() : stream);
+          if (records == null || records.isEmpty()) {
+            return CompletableFuture.completedFuture(new OtlpIngestResult(0, 0));
+          }
+          return exporter
+              .export(records, new ExportOptions(gzip, Duration.ofSeconds(30)))
+              .thenApply(r -> new OtlpIngestResult(r.accepted(), r.rejected()));
+        });
+  }
+
   // ---------------------------------------------------------------------------------------------
   // search
 
@@ -256,8 +308,9 @@ public final class Logs {
             throw new ValidationException(op + ": sql is required");
           }
           SqlSearchOptions o = options == null ? SqlSearchOptions.defaults() : options;
-          if (o.from() < 0 || o.size() < 0) {
-            throw new ValidationException(op + ": from and size must not be negative");
+          if (o.from() < 0 || o.size() < -1) {
+            throw new ValidationException(
+                op + ": from must not be negative and size must be >= -1");
           }
           Instant[] w =
               Values.window(
@@ -503,6 +556,45 @@ public final class Logs {
       return (seconds / 60) + " minute";
     }
     return seconds + " second";
+  }
+
+  /**
+   * Follows a stream by polling {@code _search} with a {@code _timestamp} cursor (OpenObserve has
+   * no live tail) and calls {@code onRow} for every new row, oldest first, until the handle is
+   * stopped. Every poll re-reads {@link LogTailOptions#overlap()} before the cursor (never before
+   * the start) and drops rows it already delivered by full-row equality, so exact duplicates within
+   * that window are delivered once.
+   *
+   * @param stream stream name
+   * @param onRow callback per row
+   * @param options filter, start, interval, overlap, page size, stream type, error callback
+   * @return the handle
+   */
+  public TailHandle tail(
+      String stream, Consumer<Map<String, Object>> onRow, LogTailOptions options) {
+    String s = Values.stream("logs.tail", stream);
+    if (onRow == null) {
+      throw new ValidationException("logs.tail: onRow is required");
+    }
+    LogTailOptions o = options == null ? LogTailOptions.defaults() : options;
+    String where = o.filter().map(f -> " AND (" + f + ")").orElse("");
+    String ident = Values.sqlIdent(s);
+    return new RowTailer(
+            api,
+            from ->
+                "SELECT * FROM "
+                    + ident
+                    + " WHERE _timestamp >= "
+                    + from
+                    + where
+                    + " ORDER BY _timestamp ASC",
+            o.streamType(),
+            o.pageSize(),
+            o.overlap(),
+            o.start().orElseGet(Instant::now),
+            onRow,
+            o.onError())
+        .start(o.interval());
   }
 
   /**

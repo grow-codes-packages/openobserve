@@ -286,6 +286,37 @@ func TestLogsIngestAndSearch(t *testing.T) {
 			t.Fatalf("tail delivered %v", seen)
 		}
 	})
+
+	t.Run("logs tail (raw rows)", func(t *testing.T) {
+		var mu sync.Mutex
+		var seen []string
+		h := must(logs.Tail(ctx, stream, func(row map[string]any) {
+			mu.Lock()
+			seen = append(seen, fmt.Sprint(row["message"]))
+			mu.Unlock()
+		}, openobserve.LogTailOptions{Filter: "src = 'rawtail" + run + "'", Interval: 200 * time.Millisecond})).get(t)
+		defer h.Stop()
+		time.Sleep(300 * time.Millisecond)
+		must(logs.IngestJSON(ctx, stream, []map[string]any{{"message": "raw 1", "src": "rawtail" + run}, {"message": "raw 2", "src": "rawtail" + run}})).get(t)
+		deadline := time.Now().Add(30 * time.Second)
+		for time.Now().Before(deadline) {
+			mu.Lock()
+			n := len(seen)
+			mu.Unlock()
+			if n >= 2 {
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		time.Sleep(600 * time.Millisecond)
+		h.Stop()
+		mu.Lock()
+		defer mu.Unlock()
+		slices.Sort(seen)
+		if !slices.Equal(seen, []string{"raw 1", "raw 2"}) {
+			t.Fatalf("logs tail delivered %v", seen)
+		}
+	})
 }
 
 func waitSearch(t *testing.T, ctx context.Context, logs *openobserve.Logs, sql string, opts openobserve.SQLSearchOptions, n int) openobserve.SQLSearchResult {
@@ -342,6 +373,18 @@ func TestLogClientsAndExporters(t *testing.T) {
 	orec := must(c.LogQuery(otlpStream).WaitForLog(ctx, "otlp exporter "+run, openobserve.WaitForLogOptions{Timeout: 30 * time.Second, Interval: 250 * time.Millisecond})).get(t)
 	if orec.Severity != openobserve.SeverityWarn || orec.TraceID != traceID || orec.Resource["service.name"] != "go-otlp" || orec.Attributes["n"] != int64(42) {
 		t.Fatalf("otlp record %+v", orec)
+	}
+
+	ires := must(c.Logs().IngestOTLP(ctx, []openobserve.LogRecord{{
+		Timestamp: time.Now(), Severity: openobserve.SeverityInfo, SeverityText: "INFO", Body: "ingest otlp " + run,
+		Resource: map[string]openobserve.AttrValue{"service.name": "go-ingest-otlp"},
+	}}, openobserve.OTLPIngestOptions{Stream: otlpStream, Gzip: true})).get(t)
+	if ires.Accepted != 1 || ires.Rejected != 0 {
+		t.Fatalf("ingestOtlp %+v", ires)
+	}
+	irec := must(c.LogQuery(otlpStream).WaitForLog(ctx, "ingest otlp "+run, openobserve.WaitForLogOptions{Timeout: 30 * time.Second, Interval: 250 * time.Millisecond})).get(t)
+	if irec.Severity != openobserve.SeverityInfo || irec.Resource["service.name"] != "go-ingest-otlp" {
+		t.Fatalf("ingestOtlp record %+v", irec)
 	}
 }
 
@@ -449,6 +492,17 @@ func TestTraces(t *testing.T) {
 	}
 	if _, err := tq.GetDependencies(ctx, openobserve.DependencyOptions{}); !errors.Is(err, openobserve.ErrUnsupported) {
 		t.Fatal(err)
+	}
+
+	// The native protocol maps to OTLP/HTTP protobuf in Go; TraceQuery(stream) reads it back.
+	nh := must(c.InitTracing(ctx, openobserve.TracingConfig{ServiceName: service + "-native", Protocol: openobserve.ProtocolNative, DisableSetGlobal: true})).get(t)
+	_, ns := nh.Tracer("integration").Start(ctx, "native-op")
+	ns.End()
+	noErr(t, nh.ForceFlush(ctx))
+	noErr(t, nh.Shutdown(ctx))
+	nt := must(c.TraceQuery(tq.Stream()).WaitForTrace(ctx, ns.SpanContext().TraceID().String(), openobserve.WaitForTraceOptions{Timeout: 60 * time.Second, Interval: 250 * time.Millisecond})).get(t)
+	if len(nt.Spans) != 1 || nt.Spans[0].ServiceName != service+"-native" {
+		t.Fatalf("native trace %+v", nt)
 	}
 }
 

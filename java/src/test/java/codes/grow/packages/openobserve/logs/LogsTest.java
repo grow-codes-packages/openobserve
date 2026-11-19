@@ -226,8 +226,9 @@ class LogsTest {
     assertThatThrownBy(() -> logs.search(null)).isInstanceOf(ValidationException.class);
     assertThatThrownBy(() -> logs.search("SELECT 1", SqlSearchOptions.builder().from(-1).build()))
         .isInstanceOf(ValidationException.class);
-    assertThatThrownBy(() -> logs.search("SELECT 1", SqlSearchOptions.builder().size(-1).build()))
+    assertThatThrownBy(() -> logs.search("SELECT 1", SqlSearchOptions.builder().size(-2).build()))
         .isInstanceOf(ValidationException.class);
+    assertThat(SqlSearchOptions.defaults().size()).isEqualTo(100);
     Instant now = Instant.now();
     assertThatThrownBy(
             () ->
@@ -362,5 +363,100 @@ class LogsTest {
     SqlSearchResult r = new SqlSearchResult(List.of(), null, 0, 0, 0, 0, null, false, 0);
     assertThat(r.total()).isEmpty();
     assertThat(r.searchId()).isEmpty();
+  }
+
+  @Test
+  void ingestOtlp() {
+    server.enqueue(200, "{}");
+    server.enqueue(
+        200, "{\"partialSuccess\":{\"rejectedLogRecords\":\"1\",\"errorMessage\":\"old\"}}");
+    codes.grow.packages.openobserve.logging.LogRecord rec =
+        codes.grow.packages.openobserve.logging.LogRecord.builder().body("otlp").build();
+    assertThat(logs.ingestOtlp(List.of(), "Otlp.S", false)).isEqualTo(new OtlpIngestResult(0, 0));
+    assertThat(logs.ingestOtlp(null)).isEqualTo(new OtlpIngestResult(0, 0));
+    assertThat(server.requests()).isEmpty();
+    assertThat(logs.ingestOtlp(List.of(rec, rec), "Otlp.S", true))
+        .isEqualTo(new OtlpIngestResult(2, 0));
+    MockServer.Recorded r = server.requests().get(0);
+    assertThat(r.uri()).isEqualTo("/api/default/v1/logs");
+    assertThat(r.header("stream-name")).isEqualTo("otlp_s");
+    assertThat(r.header("content-encoding")).isEqualTo("gzip");
+    assertThat(logs.ingestOtlpAsync(List.of(rec, rec), null, false).join())
+        .isEqualTo(new OtlpIngestResult(1, 1));
+    assertThatThrownBy(() -> logs.ingestOtlp(List.of(rec), " ", false))
+        .isInstanceOf(ValidationException.class);
+  }
+
+  @Test
+  void tailPollsFromStartAndReportsErrors() throws Exception {
+    Instant start = Instant.now().plusSeconds(1);
+    long s = codes.grow.packages.openobserve.internal.Values.micros(start);
+    String row1 = "{\"_timestamp\":" + (s + 1) + ",\"message\":\"one\"}";
+    String row2 = "{\"_timestamp\":" + (s + 2) + ",\"message\":\"two\"}";
+    String old = "{\"_timestamp\":1,\"message\":\"old\"}";
+    java.util.concurrent.atomic.AtomicInteger polls =
+        new java.util.concurrent.atomic.AtomicInteger();
+    server.fallback(
+        ex -> {
+          int n = polls.incrementAndGet();
+          if (n == 1) {
+            MockServer.send(ex, 200, "{\"hits\":[" + old + "," + row1 + "]}");
+          } else if (n == 2) {
+            MockServer.send(ex, 400, "{\"code\":400,\"message\":\"boom\"}");
+          } else {
+            MockServer.send(ex, 200, "{\"hits\":[" + row1 + "," + row2 + "]}");
+          }
+        });
+    List<String> got = new java.util.concurrent.CopyOnWriteArrayList<>();
+    List<Throwable> errors = new java.util.concurrent.CopyOnWriteArrayList<>();
+    LogTailOptions opts =
+        LogTailOptions.builder()
+            .filter("src = 'x'")
+            .start(start)
+            .interval(Duration.ofMillis(10))
+            .overlap(Duration.ofSeconds(2))
+            .pageSize(5)
+            .streamType(StreamType.LOGS)
+            .onError(errors::add)
+            .build();
+    assertThat(opts.filter()).contains("src = 'x'");
+    var h = logs.tail("Tail.S", row -> got.add(String.valueOf(row.get("message"))), opts);
+    long deadline = System.nanoTime() + Duration.ofSeconds(5).toNanos();
+    while ((got.size() < 2 || errors.isEmpty()) && System.nanoTime() < deadline) {
+      Thread.sleep(10);
+    }
+    h.stop();
+    h.stop();
+    assertThat(got).containsExactly("one", "two");
+    assertThat(errors).first().isInstanceOf(ValidationException.class);
+    JsonNode q = body(0).get("query");
+    assertThat(q.get("sql").asText())
+        .isEqualTo(
+            "SELECT * FROM \"tail_s\" WHERE _timestamp >= "
+                + s
+                + " AND (src = 'x') ORDER BY _timestamp ASC");
+    assertThat(q.get("start_time").asLong()).isEqualTo(s);
+    assertThat(q.get("size").asInt()).isEqualTo(5);
+    assertThatThrownBy(() -> logs.tail(" ", row -> {}, null))
+        .isInstanceOf(ValidationException.class);
+    assertThatThrownBy(() -> logs.tail("s", null, null)).isInstanceOf(ValidationException.class);
+    LogTailOptions d = LogTailOptions.defaults();
+    assertThat(d.filter()).isEmpty();
+    assertThat(d.start()).isEmpty();
+    assertThat(d.interval()).isEqualTo(Duration.ofSeconds(1));
+    assertThat(d.overlap()).isEqualTo(Duration.ofSeconds(1));
+    assertThat(d.pageSize()).isEqualTo(1000);
+    assertThat(d.streamType()).isEqualTo(StreamType.LOGS);
+    d.onError().accept(new RuntimeException("ignored"));
+    assertThat(
+            LogTailOptions.builder()
+                .filter("  ")
+                .interval(Duration.ofMillis(-1))
+                .overlap(Duration.ofMillis(-1))
+                .build()
+                .filter())
+        .isEmpty();
+    logs.tail("s", row -> {}, LogTailOptions.builder().interval(Duration.ofHours(1)).build())
+        .stop();
   }
 }

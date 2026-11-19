@@ -6,7 +6,7 @@
 //   OPENOBSERVE_URL=http://127.0.0.1:5080 OPENOBSERVE_USER=root@example.com \
 //   OPENOBSERVE_PASSWORD=... npm start
 
-import { OpenObserveClient, OpenObserveError, initTracing, withSpan } from "@grow-codes/openobserve";
+import { OpenObserveClient, OpenObserveError, withSpan } from "@grow-codes/openobserve";
 
 const client = OpenObserveClient.fromEnv({
   // Warnings only; the default logger is silent.
@@ -48,7 +48,7 @@ try {
   console.log("fields:", schema.schema.map((f) => f.name).join(", "));
 
   // 5. Tracing: OTLP/HTTP to /api/{org}/v1/traces with the same credentials.
-  const tracing = initTracing({ serviceName: "example", openobserve: client.config });
+  const tracing = client.initTracing({ serviceName: "example" });
   const traceId = await withSpan("checkout", async (span) => {
     span.setAttribute("order.id", 42);
     return span.spanContext().traceId;
