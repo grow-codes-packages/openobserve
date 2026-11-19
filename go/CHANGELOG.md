@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/grow-codes-packages/openobserve/compare/go/v0.1.0...go/v0.1.1) (2026-11-19)
+
+
+### Bug Fixes
+
+* sync openobserve to sdk-kit 0.3.0 (GRO-1371) ([#12](https://github.com/grow-codes-packages/openobserve/issues/12)) ([850d96b](https://github.com/grow-codes-packages/openobserve/commit/850d96b323f3c01267c8abfe1a465defab13ff7b))
+
 ## 0.1.0 (2026-11-19)
 
 
