@@ -83,7 +83,7 @@
     },
     {
       "path": ".github/workflows/release.yml",
-      "sha256": "2bbdc55d4ac1332e02825c4e26ff0f7be85e02e7c257a86df10a07fca2651754",
+      "sha256": "58c2c47c4cc486ec4b96a139360f8bae95a601121adb7470e45d74e92e1659af",
       "generated": true
     },
     {
@@ -93,7 +93,7 @@
     },
     {
       "path": ".release-please-manifest.json",
-      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356",
+      "sha256": "8bb8eecb8fb9f763e2a20886e5ed9cc77e6c8f2ead86f3ef0291e54d9ae75250",
       "generated": false
     },
     {
@@ -782,7 +782,7 @@
     },
     {
       "path": "java/Makefile",
-      "sha256": "be33adcc0ede6dbf0c4675f7ee852b750f53810c16ce481846df99780f0dc1d1",
+      "sha256": "bf9bdf19982587c7c75d227037e8ee8b875dda0e32b731b780964de9a285b038",
       "generated": false
     },
     {
@@ -1697,7 +1697,7 @@
     },
     {
       "path": "python/src/grow_openobserve/_version.py",
-      "sha256": "326553d84c140a43dd807c7e7ffd9a77a0b48f004b8de216cf29e7959ca2ed0e",
+      "sha256": "a77fa54f51fdf50ebdb72c3a3172a1bc4dbc18af2125c9b46a337b7947d33a8e",
       "generated": false
     },
     {
@@ -2287,7 +2287,7 @@
     },
     {
       "path": "typescript/Makefile",
-      "sha256": "3e794e6a9527962aa4c4353c68bc02f077445db54330c510f86093471a21f701",
+      "sha256": "e438fef66c935723bdff4e187b6d7c4132d700ace6e2d53729f88468d035fd05",
       "generated": false
     },
     {
