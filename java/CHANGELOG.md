@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.2](https://github.com/grow-codes-packages/openobserve/compare/java-v0.1.1...java-v0.1.2) (2026-11-19)
+
+
+### Dependencies
+
+* **java:** Bump the java group across 2 directories with 14 updates ([#14](https://github.com/grow-codes-packages/openobserve/issues/14)) ([4f0d890](https://github.com/grow-codes-packages/openobserve/commit/4f0d890d03930d80995ea823ad8ba0d2437195ab))
+
 ## [0.1.1](https://github.com/grow-codes-packages/openobserve/compare/java-v0.1.0...java-v0.1.1) (2026-11-19)
 
 
