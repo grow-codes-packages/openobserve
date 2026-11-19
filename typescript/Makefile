@@ -37,8 +37,8 @@ pack: build
 	$(NPM) pack --ignore-scripts --pack-destination dist
 
 # Release readiness (CI runs it after pack): the package.json metadata npm and provenance need,
-# then `npm publish --dry-run` of the packed tarball (no registry login needed);
-# a dry run that fails only because the version is already published passes.
+# then `npm publish --dry-run` of the packed tarball (no registry login needed).
+# A dry run that fails only because the version is already published passes.
 release-check: pack
 	$(RELEASE_CHECK) typescript
 	@set -- dist/*.tgz; \
