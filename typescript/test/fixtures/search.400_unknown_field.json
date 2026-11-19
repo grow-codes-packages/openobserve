@@ -1,0 +1,33 @@
+{
+  "fixture": "search.400_unknown_field",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq WHERE nocol = 1",
+        "start_time": 1795029600540087,
+        "end_time": 1795033260540087,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 20004,
+      "message": "unknown field 'nocol'",
+      "trace_id": "01a1f050f79c7371a52fd2c60aa5a0d2",
+      "suggestions": ["n"]
+    }
+  }
+}

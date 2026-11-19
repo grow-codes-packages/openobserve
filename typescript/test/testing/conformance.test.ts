@@ -14,9 +14,8 @@ let server: MockServer;
 
 beforeAll(async () => {
   server = await startServer((req) => {
-    if (req.url === "/health") return { status: 200, body: { status: "ok" } };
-    if (req.url === "/version") return { status: 200, body: { version: "0.0.1" } };
-    if (req.url === "/v1/ping") return { status: 200, body: {} };
+    if (req.url === "/healthz") return { status: 200, body: { status: "ok" } };
+    if (req.url === "/api/default/config") return { status: 200, body: { version: "v1.1.2" } };
     return { status: 404 };
   });
 });
@@ -30,7 +29,7 @@ function options(): ConformanceOptions {
     scenariosDir,
     categories: ["core"],
     factories: {
-      core: () => new OpenObserveClient({ url: server.url, token: "conformance-token" }),
+      core: () => new OpenObserveClient({ url: server.url, user: "u@x.io", token: "conformance-token" }),
     },
     capabilities: { core: ["version"] },
   };

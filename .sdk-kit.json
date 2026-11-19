@@ -107,7 +107,7 @@
     },
     {
       "path": "CONTRIBUTING.md",
-      "sha256": "1822216ab26ba287c77c3db6e6cdc6f0904c3a4872c7c04fa33b78687a0ad303",
+      "sha256": "a5a2c76274382a5d10a5d0c74a8c18013b97adece5b021069067894496c57d69",
       "generated": true
     },
     {
@@ -237,7 +237,7 @@
     },
     {
       "path": "docker/compose.yml",
-      "sha256": "d5fa85d6db806d4f1f435fc9f08f2493186ebe62ab3a993c9e8e94eec50e7f5e",
+      "sha256": "71ea7878043bb3a9a8ef9a9f4ec1d204f9f57a1a3b8f6a26c0ce82636f1f3f4c",
       "generated": true
     },
     {
@@ -302,7 +302,7 @@
     },
     {
       "path": "docs/docker-testing.md",
-      "sha256": "45e8c67937d94c2969e51d5a50fc54c16928fb9a68b4713674b8a57d31eb974e",
+      "sha256": "45de50ef3f0c7f75e148ea3d26052c4bd4f700eb82d9ebcc88c425e2e3652616",
       "generated": true
     },
     {
@@ -327,7 +327,7 @@
     },
     {
       "path": "docs/install.md",
-      "sha256": "07ea96d2e0740e9214f4a105400ba155eadc2b7d22a0b94a92286c7743bc8e1e",
+      "sha256": "c665a4950874662233e938475ac18dd88d36b61c152426a634913fac41989e60",
       "generated": true
     },
     {
@@ -427,7 +427,7 @@
     },
     {
       "path": "examples/rust/Cargo.toml",
-      "sha256": "1415027313fc7f25ed7234cef40fa885a90bcb219d146ba4c55842014f21d9e6",
+      "sha256": "2ead67a912e5102fd7547f407a78aacb73b8cbdc696c462471bffd0fa4db4ade",
       "generated": false
     },
     {
@@ -682,7 +682,7 @@
     },
     {
       "path": "go/testkit/runner_test.go",
-      "sha256": "8599025821590c463b4e2e902ebfbc6c4e2840c094dae96fa795870086aa3d17",
+      "sha256": "91c86064007bf10cea65fef8e6c0698d146486f23a833799e473ed2296fcadb5",
       "generated": true
     },
     {
@@ -987,7 +987,7 @@
     },
     {
       "path": "java/src/main/java/codes/grow/packages/openobserve/logging/BatchProcessor.java",
-      "sha256": "3e39653bd2001cce37b06347b8862036e39d0ed22c2747255de5b3785d55f982",
+      "sha256": "35cf8112e570cbf809128996b197e58a46ec8ba9b12e5caceac9afebeaf93d6d",
       "generated": true
     },
     {
@@ -1402,7 +1402,7 @@
     },
     {
       "path": "java/src/test/java/codes/grow/packages/openobserve/logging/BatchProcessorTest.java",
-      "sha256": "be01583b4140d5e3be47d3f302cd29dc0f5437e0926df32d58e64d1eab44c6c0",
+      "sha256": "f7de74a8286ce42dff2e1f35528150aff5b87dd1fc408a6f7dfac6158dd0c873",
       "generated": true
     },
     {
@@ -1472,7 +1472,7 @@
     },
     {
       "path": "java/src/test/java/codes/grow/packages/openobserve/tracing/TracingSetupTest.java",
-      "sha256": "12540b210b65c2e4df2c4eb2744c5002e543c81b509d2565bae10298778b3528",
+      "sha256": "46c65420d479d5d7eb8e26c8135f494522d7cd4ed5e08c40014cd7721234f31b",
       "generated": true
     },
     {
@@ -1567,7 +1567,7 @@
     },
     {
       "path": "python/src/grow_openobserve/_core/errors.py",
-      "sha256": "8c04e9bfeec69386fe7d2ff2690bac44f94582c6b6289ffc49abbf01e263af82",
+      "sha256": "e4b3cb52d14b8cbf52b984dbcd230b9d8f6f007817477a4932516153ecfe23ef",
       "generated": true
     },
     {
@@ -1857,7 +1857,7 @@
     },
     {
       "path": "rust/Cargo.toml",
-      "sha256": "7c3bbcca803099fb71eef82ec1d656c2b64119ecd77c96a57e79554bbf770945",
+      "sha256": "58f83de1a50ec3303b2971d6dfc7230f3f4d832d1390b359a823e78fe66d2e5a",
       "generated": false
     },
     {
@@ -1867,7 +1867,7 @@
     },
     {
       "path": "rust/README.md",
-      "sha256": "31c1040239ae0932e499635ff1e873e3903906c19963964b74fb9c27d123ca62",
+      "sha256": "1695f3a078568dfa1110604f7763ad7612afc8ccbb2fc867249113f74698608b",
       "generated": false
     },
     {
@@ -1877,7 +1877,7 @@
     },
     {
       "path": "rust/integration/Cargo.toml",
-      "sha256": "492ca7172ad567ad01827f5575d9b2a6a969b7d911c77c722619a4654da14ab2",
+      "sha256": "c62e1365d2ccd20fdbc6cb6c8bd53ecc5cfc45ed66588acaf212d3cffd69b081",
       "generated": false
     },
     {
@@ -2182,32 +2182,32 @@
     },
     {
       "path": "rust/tests/logging_adapters.rs",
-      "sha256": "4abbbacbf8166b6a6293148af7a3325e1ebd6e3f2d530c9931762eade2a53a2c",
+      "sha256": "df043039e538c70c0a7493b8c36ff027dc29b4f3793190329b3a6d27aa31198d",
       "generated": true
     },
     {
       "path": "rust/tests/logging_batch.rs",
-      "sha256": "9dfabde6ca544646580c3aad6d03a0a5322e9e26f64a8a914918aaa07659b62b",
+      "sha256": "941ecde1295ec571f11a01e2a5c3e3c6f9c12d64c531b35232849aa7d4a8d2a0",
       "generated": true
     },
     {
       "path": "rust/tests/logging_client.rs",
-      "sha256": "a9d8bc91caf134338051558d0b922207e53f123c1993943ba8903b4db6fba308",
+      "sha256": "8222df2e663b756af47f3b0c7e2dc0b6695fabed3e3b8540e869a03400ee5657",
       "generated": true
     },
     {
       "path": "rust/tests/logging_conformance.rs",
-      "sha256": "106976b04f5e741b0cee6721ea6bab885106edeb19ff7ac84b7059a299644591",
+      "sha256": "6be6043d7a6d15dd24d5ccbadf1309cb37640cd9cb9c64418e343275e806bbd1",
       "generated": true
     },
     {
       "path": "rust/tests/logging_query.rs",
-      "sha256": "7287831dce5014fb086dce46852a09ffec9ae0d27f7b2de4e6c85f24810f956d",
+      "sha256": "4e1b19dd19dd00e091d7e0f36d349cb5c75012696874e174ff1326aa4f3e0f59",
       "generated": true
     },
     {
       "path": "rust/tests/logging_records.rs",
-      "sha256": "9c1be4cec722a3abec3667ef10c8c3142c59f63118fb34f488a5b05cae0a1912",
+      "sha256": "802228f34674cbb2940c172c53c6965a252b214af305d1fbb6afcf937329a5dd",
       "generated": true
     },
     {
@@ -2217,27 +2217,27 @@
     },
     {
       "path": "rust/tests/tracing_adapters.rs",
-      "sha256": "1471c6e247c14b3cc1be0a2cd7560f56ae16e0d13f1b3e3807b930c6d3eb9cd0",
+      "sha256": "1e0131d60c34cee4aee2b514befaba56ef7ccd81160c10932c450de5fc3efb3e",
       "generated": true
     },
     {
       "path": "rust/tests/tracing_conformance.rs",
-      "sha256": "68db8abe7309bc6ede8b939ed57fad549d2ef39caa1252351a306ea636de2ff5",
+      "sha256": "5ce1b64ea2756508596277938d657a30f0ddf610423d2324b76d295f6da2089b",
       "generated": true
     },
     {
       "path": "rust/tests/tracing_local.rs",
-      "sha256": "97ed05c11207adf50fec673a7b53b91ad5fb37957bffcd81aceb8fac6df612c2",
+      "sha256": "0bd529a9ceec7bd1eb8b4af0bcbbaacdc1f0de8bc1473829851754feaca3c47d",
       "generated": true
     },
     {
       "path": "rust/tests/tracing_model.rs",
-      "sha256": "4268ca40f86fddfa4a70aee8045dcb8dcf2b35604798fc041a6b5cf3b6c5b3cd",
+      "sha256": "a6d46c11c7623f2fa53b9c8ed3547f5fce1848caf06f9cce45079e32852cdb05",
       "generated": true
     },
     {
       "path": "rust/tests/tracing_pipeline.rs",
-      "sha256": "c54a7545816c1983ad533886a99b1b6bbc19cc458ccb4635c2ccd4feea5a8f81",
+      "sha256": "9152ace6e62d642167f0bffb51518040c2a066666da981920565b24a61602378",
       "generated": true
     },
     {
@@ -2252,7 +2252,7 @@
     },
     {
       "path": "typescript/.prettierignore",
-      "sha256": "213e9f826f00551adae35eba3e3877d93666f7626e3358d1392bcea95bdf3fdb",
+      "sha256": "9efdbd2b612283220544dd94371a8b8b09267226c6c57410062a1398d225eaf0",
       "generated": true
     },
     {

@@ -1,0 +1,60 @@
+{
+  "fixture": "listStreams.paged_keyword",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/streams?type=logs&offset=0&limit=1&sort=name&asc=true&keyword=6moiazbq",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "list": [
+        {
+          "name": "passcode_6moiazbq",
+          "storage_type": "disk",
+          "stream_type": "logs",
+          "stats": {
+            "created_at": 1795033200191597,
+            "doc_time_min": 0,
+            "doc_time_max": 0,
+            "doc_num": 0,
+            "file_num": 0,
+            "storage_size": 0.0,
+            "compressed_size": 0.0,
+            "index_size": 0.0,
+            "mindex_size": 0.0
+          },
+          "schema": [],
+          "settings": {
+            "partition_keys": {},
+            "full_text_search_keys": [],
+            "index_fields": [],
+            "bloom_filter_fields": [],
+            "distinct_value_fields": [],
+            "data_retention": 0,
+            "max_query_range": 0,
+            "store_original_data": false,
+            "approx_partition": false,
+            "index_updated_at": 0,
+            "extended_retention_days": [],
+            "index_original_data": false,
+            "index_all_values": false,
+            "enable_distinct_fields": true,
+            "enable_log_patterns_extraction": false,
+            "is_llm_stream": false,
+            "storage_type": "normal"
+          },
+          "total_fields": 0
+        }
+      ],
+      "total": 11
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "fixture": "histogram.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT histogram(_timestamp, '1 minute') AS zo_sql_key, count(*) AS zo_sql_num FROM sdk_logs_6moiazbq WHERE run_id = '6moiazbq' GROUP BY zo_sql_key ORDER BY zo_sql_key",
+        "start_time": 1795029600584631,
+        "end_time": 1795033260584631,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 7,
+      "took_detail": {
+        "total": 7,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 5
+      },
+      "hits": [
+        {
+          "zo_sql_key": "2026-11-18T20:20:00",
+          "zo_sql_num": 5
+        }
+      ],
+      "total": 1,
+      "from": 0,
+      "size": 100,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 5,
+      "trace_id": "01a1f050f7c973e089efda8dc6e6bc69",
+      "is_partial": false,
+      "histogram_interval": 60,
+      "result_cache_ratio": 0,
+      "order_by": "asc",
+      "order_by_metadata": [["zo_sql_key", "asc"]],
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

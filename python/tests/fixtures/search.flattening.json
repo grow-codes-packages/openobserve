@@ -1,0 +1,70 @@
+{
+  "fixture": "search.flattening",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq_flat",
+        "start_time": 1795029600432248,
+        "end_time": 1795033260432248,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 4,
+      "took_detail": {
+        "total": 4,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 3
+      },
+      "hits": [
+        {
+          "_timestamp": 1795033200430808,
+          "b": false,
+          "f": 1.5,
+          "http_method": "GET",
+          "message": "flat",
+          "mixed_case_key": 1,
+          "tags": "[\"a\",\"b\"]",
+          "user_geo_cc": "DE",
+          "user_id": 7
+        }
+      ],
+      "total": 1,
+      "from": 0,
+      "size": 100,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 1,
+      "trace_id": "01a1f050f7317fc1b03ac1fa137fead6",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "order_by": "desc",
+      "order_by_metadata": [
+        [
+          "_timestamp",
+          "desc"
+        ]
+      ],
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "fixture": "searchAround.400_stream_not_found",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/nostream_6moiazbq/_around?key=1795033200244779&size=2",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 20002,
+      "message": "Search stream not found: nostream_6moiazbq",
+      "error_detail": "",
+      "trace_id": "01a1f050f7b67113a78d04be235ffcd5"
+    }
+  }
+}

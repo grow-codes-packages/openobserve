@@ -1,0 +1,87 @@
+{
+  "fixture": "searchTraces.latest",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/sdk_traces_6moiazbq/traces/latest?start_time=1795029600837922&end_time=1795033260837922&from=0&size=10",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 18,
+      "total": 2,
+      "from": 0,
+      "size": 10,
+      "hits": [
+        {
+          "trace_id": "138a1ed5af73678e47809f854dabaae9",
+          "start_time": 1795033200648151382,
+          "end_time": 1795033200653151382,
+          "duration": 5000,
+          "spans": [
+            1,
+            0
+          ],
+          "service_name": [
+            {
+              "service_name": "sdk-b-6moiazbq",
+              "count": 1,
+              "duration": 5000
+            }
+          ],
+          "first_event": {
+            "service_name": "sdk-b-6moiazbq",
+            "operation_name": "consume"
+          },
+          "gen_ai_usage_input_tokens": 0,
+          "gen_ai_usage_output_tokens": 0,
+          "gen_ai_usage_total_tokens": 0,
+          "gen_ai_usage_cost": 0.0,
+          "gen_ai_input_messages": null,
+          "models": []
+        },
+        {
+          "trace_id": "038a1ed5af73678e47809f854dabaae9",
+          "start_time": 1795033200603151382,
+          "end_time": 1795033200653151382,
+          "duration": 50000,
+          "spans": [
+            3,
+            1
+          ],
+          "service_name": [
+            {
+              "service_name": "sdk-a-6moiazbq",
+              "count": 2,
+              "duration": 50000
+            },
+            {
+              "service_name": "postgresql",
+              "count": 1,
+              "duration": 30000,
+              "service_type": "database"
+            }
+          ],
+          "first_event": {
+            "service_name": "sdk-a-6moiazbq",
+            "operation_name": "GET /checkout"
+          },
+          "gen_ai_usage_input_tokens": 0,
+          "gen_ai_usage_output_tokens": 0,
+          "gen_ai_usage_total_tokens": 0,
+          "gen_ai_usage_cost": 0.0,
+          "gen_ai_input_messages": null,
+          "models": []
+        }
+      ],
+      "trace_id": "01a1f050f90b7a61a8ff42ccdcbf2127"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "fixture": "traceTimeRange.not_found",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/traces/time_range?trace_id=ffffffffffffffffffffffffffffffff",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "results": [
+        {
+          "trace_id": "ffffffffffffffffffffffffffffffff",
+          "status": "not_found"
+        }
+      ],
+      "partial_coverage": false
+    }
+  }
+}

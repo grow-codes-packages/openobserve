@@ -1,0 +1,24 @@
+{
+  "fixture": "otlpTraces.400_content_type",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/v1/traces",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "text/plain",
+      "stream-name": "sdk_traces_6moiazbq"
+    },
+    "body": "x"
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 3,
+      "message": "Bad Request: Content-Type must be application/json or application/x-protobuf"
+    }
+  }
+}

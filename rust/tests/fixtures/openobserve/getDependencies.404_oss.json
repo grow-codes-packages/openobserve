@@ -1,0 +1,17 @@
+{
+  "fixture": "getDependencies.404_oss",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/traces/service_graph/topology/current?stream_name=sdk_traces_6moiazbq",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {},
+    "body": ""
+  }
+}

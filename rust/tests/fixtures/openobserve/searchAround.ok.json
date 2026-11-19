@@ -1,0 +1,77 @@
+{
+  "fixture": "searchAround.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/sdk_logs_6moiazbq/_around?key=1795033200242779&size=10",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 2,
+      "took_detail": {
+        "total": 0,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 0
+      },
+      "hits": [
+        {
+          "_timestamp": 1795033200440568,
+          "level": "debug",
+          "message": "multi 1",
+          "run_id": "6moiazbq",
+          "src": "multi"
+        },
+        {
+          "_timestamp": 1795033200440560,
+          "level": "debug",
+          "message": "multi 0",
+          "run_id": "6moiazbq",
+          "src": "multi"
+        },
+        {
+          "_timestamp": 1795033200243779,
+          "level": "warn",
+          "message": "hello gamma \u00fcn\u00efc\u00f8d\u00e9",
+          "n": 3,
+          "ok": false,
+          "run_id": "6moiazbq"
+        },
+        {
+          "_timestamp": 1795033200242779,
+          "level": "error",
+          "message": "hello beta",
+          "n": 2,
+          "run_id": "6moiazbq",
+          "user_id": 7
+        },
+        {
+          "_timestamp": 1795033200241779,
+          "level": "info",
+          "message": "hello alpha needle6moiazbq",
+          "n": 1,
+          "run_id": "6moiazbq"
+        }
+      ],
+      "total": 5,
+      "from": 0,
+      "size": 10,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 0,
+      "is_partial": false,
+      "result_cache_ratio": 0
+    }
+  }
+}

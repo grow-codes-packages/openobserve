@@ -1,0 +1,44 @@
+{
+  "fixture": "searchTraces.filter_no_match",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/sdk_traces_6moiazbq/traces/latest?start_time=1795029600926832&end_time=1795033260926832&from=0&size=10&filter=service_name%3D%27nope-6moiazbq%27",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 0,
+      "took_detail": {
+        "total": 0,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 4
+      },
+      "hits": [],
+      "total": 0,
+      "from": 0,
+      "size": 10,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 4,
+      "trace_id": "01a1f050f9437171b91b8dec1102368d",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "order_by": "desc",
+      "order_by_metadata": [["zo_sql_timestamp", "desc"]],
+      "is_histogram_eligible": false,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

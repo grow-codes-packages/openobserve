@@ -1,0 +1,24 @@
+{
+  "fixture": "otlpLogs.protobuf",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/v1/logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/x-protobuf",
+      "stream-name": "sdk_otlp_6moiazbq"
+    },
+    "body": {
+      "note": "ExportLogsServiceRequest (protobuf)",
+      "protobuf_base64": "CtQBCj4KIAoMc2VydmljZS5uYW1lEhAKDnNkay1hLTZtb2lhemJxChoKD3NlcnZpY2UudmVyc2lvbhIHCgUxLjIuMxKRAQoTCgpzZGstdmVyaWZ5EgUwLjAuMBJ6CXxHC3EvPekYEA0aBFdBUk4qGAoWb3RscCBwYiBuZWVkbGU2bW9pYXpicTIUCgZydW5faWQSCgoINm1vaWF6YnEyDQoHdXNlci5pZBICGCpFAQAAAEoQA4oe1a9zZ45HgJ+FTauq6VIIAPBnqgupArdZfEcLcS896Rg="
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/x-protobuf"
+    },
+    "body": ""
+  }
+}

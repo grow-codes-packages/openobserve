@@ -1,0 +1,71 @@
+{
+  "fixture": "valuesOf.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/sdk_logs_6moiazbq/_values?fields=level,run_id&start_time=1795029600568356&end_time=1795033260568356&size=10",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 13,
+      "took_detail": {
+        "total": 0,
+        "cache_took": 0,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 0
+      },
+      "hits": [
+        {
+          "field": "level",
+          "values": [
+            {
+              "zo_sql_key": "debug",
+              "zo_sql_num": 2
+            },
+            {
+              "zo_sql_key": "error",
+              "zo_sql_num": 1
+            },
+            {
+              "zo_sql_key": "info",
+              "zo_sql_num": 1
+            },
+            {
+              "zo_sql_key": "warn",
+              "zo_sql_num": 1
+            }
+          ]
+        },
+        {
+          "field": "run_id",
+          "values": [
+            {
+              "zo_sql_key": "6moiazbq",
+              "zo_sql_num": 5
+            }
+          ]
+        }
+      ],
+      "total": 2,
+      "from": 0,
+      "size": 10,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 5,
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "peak_memory_usage": 0.0
+    }
+  }
+}

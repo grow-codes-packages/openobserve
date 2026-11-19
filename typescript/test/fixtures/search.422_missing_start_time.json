@@ -1,0 +1,24 @@
+{
+  "fixture": "search.422_missing_start_time",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq"
+      }
+    }
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": "Failed to deserialize the JSON body into the target type: query: missing field `start_time` at line 1 column 52"
+  }
+}

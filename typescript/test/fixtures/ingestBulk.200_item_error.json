@@ -1,0 +1,40 @@
+{
+  "fixture": "ingestBulk.200_item_error",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_bulk",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/x-ndjson"
+    },
+    "body": "{\"index\": {\"_index\": \"sdk_bulk_6moiazbq\"}}\n{\"message\": \"old\", \"_timestamp\": 1794774000448155}\n{\"delete\": {\"_index\": \"sdk_bulk_6moiazbq\", \"_id\": \"1\"}}\n"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 0,
+      "errors": true,
+      "items": [
+        {
+          "index": {
+            "_index": "sdk_bulk_6moiazbq",
+            "_id": "",
+            "status": 422,
+            "error": {
+              "type": "timestamp_parsing_failed",
+              "reason": "Too old data, only last 5 hours data can be ingested. Data discarded. You can adjust ingestion max time by setting the environment variable ZO_INGEST_ALLOWED_UPTO=<max_hours>",
+              "index_uuid": "0",
+              "shard": "1",
+              "index": "sdk_bulk_6moiazbq"
+            },
+            "originalRecord": null
+          }
+        }
+      ]
+    }
+  }
+}

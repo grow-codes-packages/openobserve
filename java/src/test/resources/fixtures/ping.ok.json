@@ -1,0 +1,197 @@
+{
+  "fixture": "ping.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/config",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "version": "v1.1.2",
+      "commit_hash": "d16d693ba99bc20621a58b948ecbcad7ec7fa882",
+      "build_date": "2026-10-20T05:04:56Z",
+      "build_type": "opensource",
+      "default_fts_keys": [
+        "body",
+        "content",
+        "data",
+        "error",
+        "json",
+        "llm_input",
+        "llm_output",
+        "log",
+        "message",
+        "msg"
+      ],
+      "default_secondary_index_fields": [
+        "operation_name",
+        "service_name",
+        "trace_id"
+      ],
+      "default_quick_mode_fields": [
+        "duration",
+        "operation_name",
+        "service",
+        "service_name",
+        "session_id",
+        "span_id",
+        "trace_id",
+        "version",
+        "view_url"
+      ],
+      "telemetry_enabled": false,
+      "default_functions": [
+        {
+          "name": "match_all",
+          "text": "match_all('v')"
+        },
+        {
+          "name": "fuzzy_match_all",
+          "text": "fuzzy_match_all('v', 1)"
+        },
+        {
+          "name": "str_match",
+          "text": "str_match(field, 'v')"
+        },
+        {
+          "name": "str_match_ignore_case",
+          "text": "str_match_ignore_case(field, 'v')"
+        },
+        {
+          "name": "match_field",
+          "text": "match_field(field, 'v')"
+        },
+        {
+          "name": "match_field_ignore_case",
+          "text": "match_field_ignore_case(field, 'v')"
+        },
+        {
+          "name": "fuzzy_match",
+          "text": "fuzzy_match(field, 'v', 1)"
+        },
+        {
+          "name": "re_match",
+          "text": "re_match(field, 'pattern')"
+        },
+        {
+          "name": "re_not_match",
+          "text": "re_not_match(field, 'pattern')"
+        },
+        {
+          "name": "re_matches",
+          "text": "re_matches(field, 'pattern')"
+        },
+        {
+          "name": "cast_to_timestamp",
+          "text": "cast_to_timestamp('pattern')"
+        }
+      ],
+      "sql_reserved_keywords": [
+        "all",
+        "current_catalog",
+        "current_date",
+        "current_time",
+        "current_timestamp",
+        "current_user",
+        "distinct",
+        "end-exec",
+        "exists",
+        "false",
+        "from",
+        "interval",
+        "localtime",
+        "localtimestamp",
+        "not",
+        "null",
+        "session_user",
+        "top",
+        "trim",
+        "true",
+        "user"
+      ],
+      "sql_base64_enabled": false,
+      "timestamp_column": "_timestamp",
+      "data_retention_days": 3650,
+      "extended_data_retention_days": 3650,
+      "restricted_routes_on_empty_data": false,
+      "sso_enabled": false,
+      "native_login_enabled": true,
+      "service_account_enabled": true,
+      "rbac_enabled": false,
+      "super_cluster_enabled": false,
+      "query_on_stream_selection": true,
+      "show_stream_stats_doc_num": true,
+      "custom_logo_text": "",
+      "custom_slack_url": "",
+      "custom_docs_url": "",
+      "rum": {
+        "enabled": false,
+        "client_token": "",
+        "application_id": "",
+        "site": "",
+        "service": "",
+        "env": "",
+        "version": "",
+        "organization_identifier": "",
+        "api_version": "",
+        "insecure_http": false
+      },
+      "custom_logo_img": null,
+      "custom_logo_dark_img": null,
+      "custom_hide_menus": "",
+      "custom_hide_self_logo": false,
+      "meta_org": "_meta",
+      "quick_mode_enabled": false,
+      "user_defined_schemas_enabled": false,
+      "user_defined_schema_max_fields": 1000,
+      "all_fields_name": "_all",
+      "usage_enabled": false,
+      "usage_publish_interval": 60,
+      "ingestion_url": "",
+      "web_url": "http://localhost:5080",
+      "min_auto_refresh_interval": 5,
+      "query_default_limit": 1000,
+      "max_dashboard_series": 100,
+      "streaming_enabled": true,
+      "histogram_enabled": true,
+      "timechart_enabled": false,
+      "max_query_range": 0,
+      "ai_enabled": false,
+      "org_deletion_grace_period_days": 0,
+      "dashboard_placeholder": "_o2_all_",
+      "dashboard_show_symbol_enabled": false,
+      "dashboard_show_field_as_json_enabled": false,
+      "ingest_flatten_level": 3,
+      "log_page_default_field_list": "uds",
+      "query_values_default_num": 10,
+      "alert_preview_timerange_minutes": 0,
+      "incidents_enabled": false,
+      "service_streams_enabled": false,
+      "model_pricing_enabled": true,
+      "online_evals_enabled": false,
+      "anomaly_detection_enabled": false,
+      "composite_alerts_available": true,
+      "synthetics_enabled": false,
+      "oncall_enabled": false,
+      "synthetics_private_locations_enabled": false,
+      "synthetics_subtests_enabled": false,
+      "synthetics_browser_max_steps": 50,
+      "synthetics_recorder_extension_url": "https://chromewebstore.google.com/detail/afhgiecgbpohkbobialnajlphbpcgomo",
+      "database_monitoring_enabled": true,
+      "enable_cross_linking": false,
+      "show_fts_field_values": false,
+      "search_inspector_enabled": false,
+      "auto_query_enabled": false,
+      "profiling_enabled": false,
+      "product_analytics_enabled": false
+    }
+  }
+}

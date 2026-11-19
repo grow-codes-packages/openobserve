@@ -1,0 +1,22 @@
+{
+  "fixture": "otlpTraces.401",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/v1/traces",
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {}
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 401,
+      "message": "Unauthorized Access"
+    }
+  }
+}

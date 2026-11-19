@@ -1,0 +1,31 @@
+{
+  "fixture": "search.400_bad_sql",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELEC * FRM x",
+        "start_time": 1795029600537254,
+        "end_time": 1795033260537254,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 400,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 400,
+      "message": "Error# SQL error: ParserError(\"Expected: an SQL statement, found: SELEC at Line: 1, Column: 1\")"
+    }
+  }
+}

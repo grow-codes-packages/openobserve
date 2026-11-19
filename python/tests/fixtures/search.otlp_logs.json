@@ -1,0 +1,97 @@
+{
+  "fixture": "search.otlp_logs",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_otlp_6moiazbq WHERE run_id = '6moiazbq' ORDER BY _timestamp",
+        "start_time": 1795029600462864,
+        "end_time": 1795033260462864,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "took": 11,
+      "took_detail": {
+        "total": 11,
+        "cache_took": 2,
+        "file_list_took": 0,
+        "wait_in_queue": 0,
+        "idx_took": 0,
+        "search_took": 8
+      },
+      "hits": [
+        {
+          "_timestamp": 1795033200453175,
+          "body": "otlp pb needle6moiazbq",
+          "dropped_attributes_count": 0,
+          "instrumentation_library_name": "sdk-verify",
+          "instrumentation_library_version": "0.0.0",
+          "run_id": "6moiazbq",
+          "service_name": "sdk-a-6moiazbq",
+          "service_version": "1.2.3",
+          "severity": "WARN",
+          "severity_number": 13,
+          "span_id": "00f067aa0ba902b7",
+          "trace_id": "038a1ed5af73678e47809f854dabaae9",
+          "user_id": 42
+        },
+        {
+          "_timestamp": 1795033200455798,
+          "body": "otlp json",
+          "dropped_attributes_count": 0,
+          "instrumentation_library_name": "sdk-verify",
+          "run_id": "6moiazbq",
+          "service_name": "sdk-json-6moiazbq",
+          "severity": "INFO",
+          "severity_number": 9,
+          "span_id": "b7ad6b7169203331",
+          "trace_id": "038a1ed5af73678e47809f854dabaae9"
+        },
+        {
+          "_timestamp": 1795033200459131,
+          "body": "otlp gzip",
+          "dropped_attributes_count": 0,
+          "instrumentation_library_name": "sdk-verify",
+          "instrumentation_library_version": "0.0.0",
+          "run_id": "6moiazbq",
+          "service_name": "sdk-gz-6moiazbq",
+          "severity": "INFO",
+          "severity_number": 9
+        }
+      ],
+      "total": 3,
+      "from": 0,
+      "size": 100,
+      "cached_ratio": 0,
+      "scan_size": 0,
+      "idx_scan_size": 0,
+      "scan_records": 3,
+      "trace_id": "01a1f050f74f7e21960d33bb7615bf8b",
+      "is_partial": false,
+      "result_cache_ratio": 0,
+      "order_by": "asc",
+      "order_by_metadata": [
+        [
+          "_timestamp",
+          "asc"
+        ]
+      ],
+      "is_histogram_eligible": true,
+      "peak_memory_usage": 1.0
+    }
+  }
+}

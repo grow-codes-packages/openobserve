@@ -30,11 +30,15 @@ has the same functions, options, defaults, error codes and behaviour, tested aga
   log search ([Logging](logging.md)).
 - **Tracing**: OpenTelemetry setup, span helpers, propagation, framework adapters and trace
   queries ([Tracing](tracing.md)).
-- **Service functions** for the OpenObserve API ([Functions](functions.md)).
+- **OpenObserve API**: log ingestion (`_json`, `_multi`, `_bulk`, OTLP), SQL search with
+  microsecond ranges, `_around`, `_values`, histograms and a polling tail
+  ([Ingest](functions/ingest.md), [Search and tail](functions/search.md)); stream schema and
+  settings ([Streams](functions/streams.md)); OTLP tracing setup and trace queries
+  ([Traces](functions/traces.md)); organizations and service accounts ([Admin](functions/admin.md)).
 
 Start with [Install](install.md) and the [Quickstart](quickstart.md).
 
 !!! note "Independent project"
     This SDK is made by [Grow Codes](https://grow.codes). OpenObserve is a trademark of
-    ZincLabs, Inc.. This project is not affiliated with or endorsed by ZincLabs, Inc.. See
+    ZincLabs, Inc. This project is not affiliated with or endorsed by ZincLabs, Inc. See
     [License & disclaimer](license.md).
