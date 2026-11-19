@@ -1,6 +1,6 @@
-# @grow-codes/**KEY**
+# @grow-codes/openobserve
 
-TypeScript SDK for [**DISPLAY**](https://grow-codes-packages.github.io/openobserve/) by Grow Codes.
+TypeScript SDK for [OpenObserve](https://grow-codes-packages.github.io/openobserve/) by Grow Codes.
 Node.js 22.12 or newer, ESM and CommonJS, full type definitions.
 
 ```sh
@@ -28,4 +28,4 @@ Test helpers (in-memory fakes and the conformance runner) live in
 `@grow-codes/openobserve/testing`.
 
 Documentation: https://grow-codes-packages.github.io/openobserve/ · Licence: Apache-2.0.
-**DISPLAY** is a trademark of **VENDOR**; this package is not affiliated with or endorsed by it.
+OpenObserve is a trademark of ZincLabs, Inc.; this package is not affiliated with or endorsed by it.
