@@ -1,0 +1,24 @@
+{
+  "fixture": "getPasscode.ok",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/passcode",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "data": {
+        "passcode": "<redacted>",
+        "user": "admin@stack.local"
+      }
+    }
+  }
+}

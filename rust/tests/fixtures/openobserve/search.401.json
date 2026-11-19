@@ -1,0 +1,28 @@
+{
+  "fixture": "search.401",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/_search?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "query": {
+        "sql": "SELECT * FROM sdk_logs_6moiazbq",
+        "start_time": 1795029600543323,
+        "end_time": 1795033260543323,
+        "from": 0,
+        "size": 100
+      }
+    }
+  },
+  "response": {
+    "status": 401,
+    "headers": {
+      "www-authenticate": "Bearer realm=\"openobserve\""
+    },
+    "body": "Unauthorized Access"
+  }
+}

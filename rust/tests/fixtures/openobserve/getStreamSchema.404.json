@@ -1,0 +1,22 @@
+{
+  "fixture": "getStreamSchema.404",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "GET",
+    "path": "/api/default/streams/nostream_6moiazbq/schema?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>"
+    },
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 404,
+      "message": "stream not found"
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "fixture": "ingestJson.stream_name_normalized",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "POST",
+    "path": "/api/default/Sdk-Mixed.6moiazbq/_json",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": [
+      {
+        "message": "x"
+      }
+    ]
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json"
+    },
+    "body": {
+      "code": 200,
+      "status": [
+        {
+          "name": "sdk_mixed_6moiazbq",
+          "successful": 1,
+          "failed": 0
+        }
+      ]
+    }
+  }
+}

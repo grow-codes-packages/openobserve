@@ -1,0 +1,24 @@
+{
+  "fixture": "updateStreamSettings.422_plain_array",
+  "server": "openobserve v1.1.2",
+  "request": {
+    "method": "PUT",
+    "path": "/api/default/streams/sdk_logs_6moiazbq/settings?type=logs",
+    "headers": {
+      "authorization": "Basic <redacted>",
+      "content-type": "application/json"
+    },
+    "body": {
+      "full_text_search_keys": [
+        "message"
+      ]
+    }
+  },
+  "response": {
+    "status": 422,
+    "headers": {
+      "content-type": "text/plain; charset=utf-8"
+    },
+    "body": "Failed to deserialize the JSON body into the target type: full_text_search_keys[0]: invalid type: string \"message\", expected a sequence at line 1 column 36"
+  }
+}
